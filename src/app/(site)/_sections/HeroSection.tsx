@@ -11,6 +11,7 @@ import { ChevronLeft, ChevronRight } from 'lucide-react'
 interface Slide {
   id: string
   image: string
+  mobile_image?: string
   pre_title?: string
   title?: string
   highlight_word?: string
@@ -173,11 +174,24 @@ export function HeroSection({ data }: HeroSectionProps) {
             <div key={slide.id} className="flex-[0_0_100%] min-w-0 relative h-full">
               {/* Slide Background */}
               <div className="absolute inset-0">
+                {/* Mobil görsel (md'den küçük ekranlar) */}
+                {slide.mobile_image && (
+                  <Image
+                    src={slide.mobile_image}
+                    alt={slide.title || `Slide ${index + 1}`}
+                    fill
+                    className="object-cover object-center md:hidden"
+                    priority={index === 0}
+                    sizes="100vw"
+                    quality={90}
+                  />
+                )}
+                {/* Desktop görsel */}
                 <Image
                   src={slide.image}
                   alt={slide.title || `Slide ${index + 1}`}
                   fill
-                  className="object-cover object-center"
+                  className={`object-cover object-center ${slide.mobile_image ? 'hidden md:block' : ''}`}
                   priority={index === 0}
                   sizes="100vw"
                   quality={90}

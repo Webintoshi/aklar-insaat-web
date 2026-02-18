@@ -30,7 +30,7 @@ export const metadata: Metadata = {
 }
 
 async function getWhatsAppConfig() {
-  const supabase = createClient()
+  const supabase = await createClient()
   const { data } = await supabase
     .from('whatsapp_widget_config')
     .select('*')

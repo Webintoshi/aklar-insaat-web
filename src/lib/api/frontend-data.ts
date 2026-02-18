@@ -281,6 +281,37 @@ const defaultProjects: Project[] = [
 
 export async function getHeroSection(): Promise<HeroSection> {
   const supabase = await createClient()
+  
+  // Önce hero_banners tablosundan aktif banner'ları çek
+  const { data: banners } = await supabase
+    .from('hero_banners')
+    .select('*')
+    .eq('is_active', true)
+    .order('order_index', { ascending: true })
+  
+  // Eğer banner varsa, slider formatına dönüştür
+  if (banners && banners.length > 0) {
+    const sliderImages = banners.map((banner) => ({
+      id: banner.id,
+      image: banner.desktop_image || '/images/hero-banner.jpg',
+      mobile_image: banner.mobile_image || undefined,
+      pre_title: '',
+      title: banner.title || '',
+      highlight_word: banner.subtitle || '',
+      badge_text: '',
+      badge_subtext: '',
+      cta_text: banner.button_text || 'İNCELE',
+      cta_link: banner.button_link || '/projeler',
+    }))
+    
+    return {
+      ...defaultHero,
+      background_type: 'slider',
+      slider_images: sliderImages,
+    }
+  }
+  
+  // Banner yoksa hero_sections tablosuna bak
   const { data } = await supabase
     .from('hero_sections')
     .select('*')
