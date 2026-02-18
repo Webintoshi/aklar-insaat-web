@@ -1,61 +1,60 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, useEffect, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { Building2, Loader2 } from 'lucide-react'
 
 export default function LoginPage() {
-  const router = useRouter()
-  const supabase = createClient()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState(false)
+  const checkedRef = useRef(false)
 
-  // Session kontrolü - zaten giriş yapmışsa admin'e yönlendir
+  // Sadece bir kere çalışsın - infinite loop'u engelle
   useEffect(() => {
+    if (checkedRef.current) return
+    checkedRef.current = true
+
     const checkSession = async () => {
+      const supabase = createClient()
       const { data: { session } } = await supabase.auth.getSession()
       if (session) {
-        window.location.href = '/admin/pages'
+        window.location.replace('/admin/pages')
       }
     }
     checkSession()
-  }, [supabase])
+  }, []) // Boş dependency array - sadece mount'ta çalışır
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    e.stopPropagation()
     
     setLoading(true)
     setError('')
     setSuccess(false)
 
     try {
-      const { data, error: signInError } = await supabase.auth.signInWithPassword({
+      const supabase = createClient()
+      const { error: signInError } = await supabase.auth.signInWithPassword({
         email,
         password,
       })
 
       if (signInError) {
-        console.error('Sign in error:', signInError)
         setError(signInError.message || 'Giriş başarısız.')
         setLoading(false)
         return
       }
 
-      console.log('Login success:', data.user)
       setSuccess(true)
       
-      // Hard redirect ile çöz - Next.js router yerine
+      // Hard redirect - replace kullanarak history'de geri dönülmesini engelle
       setTimeout(() => {
-        window.location.href = '/admin/pages'
-      }, 500)
+        window.location.replace('/admin/pages')
+      }, 800)
       
     } catch (err) {
-      console.error('Exception:', err)
       setError('Beklenmeyen bir hata oluştu.')
     }
     
@@ -99,6 +98,7 @@ export default function LoginPage() {
                 className="w-full px-4 py-3 border border-gray-400 bg-white text-gray-900 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors placeholder-gray-500"
                 placeholder="admin@example.com"
                 required
+                disabled={loading}
               />
             </div>
 
@@ -114,6 +114,7 @@ export default function LoginPage() {
                 className="w-full px-4 py-3 border border-gray-400 bg-white text-gray-900 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors"
                 placeholder="••••••••"
                 required
+                disabled={loading}
               />
             </div>
 
