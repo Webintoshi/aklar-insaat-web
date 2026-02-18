@@ -118,7 +118,7 @@ export default function HeroNewPage() {
       const bannersToSave = banners.filter(b => b.desktop_image || b.mobile_image)
       
       if (bannersToSave.length === 0) {
-        router.push('/admin')
+        router.push('/admin/hero')
         return
       }
 
@@ -137,7 +137,7 @@ export default function HeroNewPage() {
         }
       }
 
-      router.push('/admin')
+      router.push('/admin/hero')
     } catch (error: any) {
       console.error('Save error:', error)
       setSaveError(error.message || 'Kaydetme sırasında bir hata oluştu')

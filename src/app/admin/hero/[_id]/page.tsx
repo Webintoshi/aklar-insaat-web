@@ -1,107 +1,134 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { ArrowLeft, Loader2, Save } from 'lucide-react'
+import { ArrowLeft, Loader2, Save, Plus, Trash2, Upload, Monitor, Smartphone, AlertCircle, ImageIcon } from 'lucide-react'
 import Link from 'next/link'
+import Image from 'next/image'
 
-interface HeroSection {
-  id: string
-  name: string
-  is_active: boolean
-  order_index: number
-  background_type: 'image' | 'video' | 'slider'
-  background_image: string
-  background_video: string | null
-  slider_images: string[]
-  pre_title: string
+interface HeroBanner {
+  id?: string
+  desktop_image: string
+  mobile_image: string
   title: string
-  highlight_word: string
-  description: string
-  badge_text: string
-  badge_subtext: string
-  primary_cta: { text: string; link: string; variant: string }
-  secondary_cta: { text: string; link: string; variant: string }
-  stats: { label: string; value: string }[]
-  show_gradient_overlay: boolean
+  subtitle: string
+  button_text: string
+  button_link: string
+  order_index: number
+  is_active: boolean
 }
 
-export default function HeroEditorPage({ params }: { params: { _id: string } }) {
+export default function HeroEditPage({ params }: { params: { _id: string } }) {
   const router = useRouter()
   const supabase = createClient()
   const isNew = params._id === 'new'
   
   const [loading, setLoading] = useState(false)
+  const [uploadError, setUploadError] = useState<string | null>(null)
+  const [saveError, setSaveError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
-  const [data, setData] = useState<Partial<HeroSection>>({
-    name: '',
-    is_active: true,
+  const [banner, setBanner] = useState<HeroBanner>({
+    desktop_image: '',
+    mobile_image: '',
+    title: '',
+    subtitle: '',
+    button_text: '',
+    button_link: '',
     order_index: 0,
-    background_type: 'image',
-    background_image: '',
-    background_video: '',
-    slider_images: [],
-    pre_title: 'SİZE ÖZEL DAİRELER',
-    title: 'Size Özel Yaşam',
-    highlight_word: 'MODERN YAŞAM',
-    description: '',
-    badge_text: '3+1',
-    badge_subtext: 'DAİRELER',
-    primary_cta: { text: 'İNCELE', link: '/projeler', variant: 'primary' },
-    secondary_cta: { text: '', link: '', variant: 'outline' },
-    stats: [],
-    show_gradient_overlay: true,
+    is_active: true,
   })
 
   useEffect(() => {
     if (!isNew) {
-      fetchHero()
+      fetchBanner()
     }
   }, [isNew])
 
-  const fetchHero = async () => {
+  const fetchBanner = async () => {
     setLoading(true)
-    const { data: hero } = await supabase
-      .from('hero_sections')
+    const { data, error } = await supabase
+      .from('hero_banners')
       .select('*')
       .eq('id', params._id)
       .single()
     
-    if (hero) {
-      setData({
-        ...hero,
-        slider_images: hero.slider_images || [],
-        stats: hero.stats || [],
-        primary_cta: hero.primary_cta || { text: 'İNCELE', link: '/projeler', variant: 'primary' },
-        secondary_cta: hero.secondary_cta || { text: '', link: '', variant: 'outline' },
-        badge_text: hero.badge_text || '3+1',
-        badge_subtext: hero.badge_subtext || 'DAİRELER',
-        show_gradient_overlay: hero.show_gradient_overlay !== false,
-      })
+    if (error) {
+      console.error('Fetch error:', error)
+      setSaveError('Banner yüklenirken hata: ' + error.message)
+    } else if (data) {
+      setBanner(data)
     }
     setLoading(false)
+  }
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>, type: 'desktop' | 'mobile') => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    setLoading(true)
+    setUploadError(null)
+
+    try {
+      const formData = new FormData()
+      formData.append('file', file)
+
+      const response = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData,
+      })
+
+      const result = await response.json()
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Yükleme başarısız')
+      }
+
+      if (result.url) {
+        console.log('Uploaded image URL:', result.url)
+        setBanner(prev => ({
+          ...prev,
+          [type === 'desktop' ? 'desktop_image' : 'mobile_image']: result.url
+        }))
+      }
+    } catch (error: any) {
+      console.error('Upload error:', error)
+      setUploadError(error.message || 'Görsel yüklenirken bir hata oluştu')
+    } finally {
+      setLoading(false)
+    }
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setSaving(true)
+    setSaveError(null)
 
-    const payload = {
-      ...data,
-      slider_images: data.slider_images?.filter(Boolean) || [],
-      stats: data.stats?.filter(s => s.label && s.value) || [],
+    try {
+      if (isNew) {
+        const { error } = await supabase.from('hero_banners').insert(banner)
+        if (error) throw error
+      } else {
+        const { error } = await supabase.from('hero_banners').update(banner).eq('id', params._id)
+        if (error) throw error
+      }
+      
+      router.push('/admin/hero')
+    } catch (error: any) {
+      console.error('Save error:', error)
+      setSaveError(error.message || 'Kaydetme sırasında bir hata oluştu')
+    } finally {
+      setSaving(false)
     }
+  }
 
-    if (isNew) {
-      const { error } = await supabase.from('hero_sections').insert(payload)
-      if (!error) router.push('/admin/hero')
-    } else {
-      const { error } = await supabase.from('hero_sections').update(payload).eq('id', params._id)
-      if (!error) router.push('/admin/hero')
-    }
-    
-    setSaving(false)
+  const handleImageError = (e: React.SyntheticEvent<HTMLImageElement>, type: 'desktop' | 'mobile') => {
+    console.error('Image failed to load:', e.currentTarget.src)
+    setBanner(prev => ({
+      ...prev,
+      [type === 'desktop' ? 'desktop_image' : 'mobile_image']: ''
+    }))
+    setUploadError('Görsel yüklenemedi. URL: ' + e.currentTarget.src)
   }
 
   if (loading) {
@@ -120,191 +147,212 @@ export default function HeroEditorPage({ params }: { params: { _id: string } }) 
             <ArrowLeft className="w-5 h-5" />
           </Link>
           <h1 className="text-2xl font-bold text-gray-800">
-            {isNew ? 'Yeni Hero Bölümü' : 'Hero Düzenle'}
+            {isNew ? 'Yeni Banner Ekle' : 'Banner Düzenle'}
           </h1>
+        </div>
+        <button
+          onClick={handleSubmit}
+          disabled={saving}
+          className="flex items-center px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors disabled:opacity-50"
+        >
+          {saving ? (
+            <>
+              <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+              Kaydediliyor...
+            </>
+          ) : (
+            <>
+              <Save className="w-5 h-5 mr-2" />
+              Kaydet
+            </>
+          )}
+        </button>
+      </div>
+
+      {(uploadError || saveError) && (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+          <div className="flex items-center">
+            <AlertCircle className="w-5 h-5 text-red-600 mr-2 flex-shrink-0" />
+            <span className="text-red-700 font-medium">Hata!</span>
+          </div>
+          {uploadError && <p className="text-red-700 mt-1 text-sm">{uploadError}</p>}
+          {saveError && <p className="text-red-700 mt-1 text-sm">{saveError}</p>}
+        </div>
+      )}
+
+      <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Masaüstü Görseli */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              <Monitor className="w-4 h-4 inline mr-1" />
+              Masaüstü Görseli
+            </label>
+            <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center">
+              {banner.desktop_image ? (
+                <div className="relative">
+                  <img
+                    src={banner.desktop_image}
+                    alt="Desktop"
+                    className="w-full h-48 object-cover rounded-lg mx-auto"
+                    onError={(e) => handleImageError(e, 'desktop')}
+                  />
+                  <div className="mt-2 text-xs text-gray-500 truncate">
+                    URL: {banner.desktop_image}
+                  </div>
+                  <button
+                    onClick={() => setBanner(prev => ({ ...prev, desktop_image: '' }))}
+                    className="absolute top-2 right-2 p-1 bg-red-600 text-white rounded-full"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+              ) : (
+                <label className="cursor-pointer">
+                  <Upload className="w-8 h-8 mx-auto text-gray-400 mb-2" />
+                  <p className="text-sm text-gray-500">Görsel seç</p>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) => handleImageUpload(e, 'desktop')}
+                  />
+                </label>
+              )}
+            </div>
+          </div>
+
+          {/* Mobil Görseli */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              <Smartphone className="w-4 h-4 inline mr-1" />
+              Mobil Görseli
+            </label>
+            <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center">
+              {banner.mobile_image ? (
+                <div className="relative">
+                  <img
+                    src={banner.mobile_image}
+                    alt="Mobile"
+                    className="w-full h-48 object-cover rounded-lg mx-auto"
+                    onError={(e) => handleImageError(e, 'mobile')}
+                  />
+                  <div className="mt-2 text-xs text-gray-500 truncate">
+                    URL: {banner.mobile_image}
+                  </div>
+                  <button
+                    onClick={() => setBanner(prev => ({ ...prev, mobile_image: '' }))}
+                    className="absolute top-2 right-2 p-1 bg-red-600 text-white rounded-full"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+              ) : (
+                <label className="cursor-pointer">
+                  <Upload className="w-8 h-8 mx-auto text-gray-400 mb-2" />
+                  <p className="text-sm text-gray-500">Görsel seç</p>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) => handleImageUpload(e, 'mobile')}
+                  />
+                </label>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Metin Alanları */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Başlık
+            </label>
+            <input
+              type="text"
+              value={banner.title}
+              onChange={(e) => setBanner(prev => ({ ...prev, title: e.target.value }))}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+              placeholder="Hero başlığı"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Alt Başlık
+            </label>
+            <input
+              type="text"
+              value={banner.subtitle}
+              onChange={(e) => setBanner(prev => ({ ...prev, subtitle: e.target.value }))}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+              placeholder="Alt başlık"
+            />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Buton Metni
+            </label>
+            <input
+              type="text"
+              value={banner.button_text}
+              onChange={(e) => setBanner(prev => ({ ...prev, button_text: e.target.value }))}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+              placeholder="İncele"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Buton Linki
+            </label>
+            <input
+              type="text"
+              value={banner.button_link}
+              onChange={(e) => setBanner(prev => ({ ...prev, button_link: e.target.value }))}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+              placeholder="/projeler"
+            />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Sıra
+            </label>
+            <input
+              type="number"
+              value={banner.order_index}
+              onChange={(e) => setBanner(prev => ({ ...prev, order_index: parseInt(e.target.value) || 0 }))}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+            />
+          </div>
+          <div className="flex items-center h-full pt-6">
+            <input
+              type="checkbox"
+              id="is_active"
+              checked={banner.is_active}
+              onChange={(e) => setBanner(prev => ({ ...prev, is_active: e.target.checked }))}
+              className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+            />
+            <label htmlFor="is_active" className="ml-2 text-sm text-gray-700">
+              Aktif (Sitede göster)
+            </label>
+          </div>
         </div>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-6">
-        {/* Temel Bilgiler */}
-        <div className="bg-white rounded-xl shadow-sm p-6">
-          <h2 className="text-lg font-semibold text-gray-800 mb-4">Temel Bilgiler</h2>
-          <div className="grid md:grid-cols-3 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Bölüm Adı</label>
-              <input
-                type="text"
-                value={data.name}
-                onChange={(e) => setData({ ...data, name: e.target.value })}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-                placeholder="Ana Sayfa Hero"
-                required
-              />
-            </div>
-            <div className="flex items-center">
-              <label className="flex items-center mt-8">
-                <input
-                  type="checkbox"
-                  checked={data.is_active}
-                  onChange={(e) => setData({ ...data, is_active: e.target.checked })}
-                  className="w-4 h-4 text-blue-600 rounded"
-                />
-                <span className="ml-2 text-sm text-gray-700">Aktif</span>
-              </label>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Sıra</label>
-              <input
-                type="number"
-                value={data.order_index}
-                onChange={(e) => setData({ ...data, order_index: parseInt(e.target.value) || 0 })}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-              />
-            </div>
+      {loading && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 flex items-center">
+            <Loader2 className="w-6 h-6 animate-spin text-blue-600 mr-3" />
+            <span>Görsel yükleniyor...</span>
           </div>
         </div>
-
-        {/* Arka Plan */}
-        <div className="bg-white rounded-xl shadow-sm p-6">
-          <h2 className="text-lg font-semibold text-gray-800 mb-4">Arka Plan</h2>
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Arka Plan Görseli URL</label>
-              <input
-                type="text"
-                value={data.background_image}
-                onChange={(e) => setData({ ...data, background_image: e.target.value })}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-                placeholder="https://..."
-                required
-              />
-            </div>
-            <div className="flex items-center">
-              <label className="flex items-center">
-                <input
-                  type="checkbox"
-                  checked={data.show_gradient_overlay}
-                  onChange={(e) => setData({ ...data, show_gradient_overlay: e.target.checked })}
-                  className="w-4 h-4 text-blue-600 rounded"
-                />
-                <span className="ml-2 text-sm text-gray-700">Gradient overlay göster</span>
-              </label>
-            </div>
-          </div>
-        </div>
-
-        {/* İçerik - Sağ Taraf */}
-        <div className="bg-white rounded-xl shadow-sm p-6">
-          <h2 className="text-lg font-semibold text-gray-800 mb-4">İçerik (Sağ Taraf)</h2>
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Üst Başlık (Pre-title)</label>
-              <input
-                type="text"
-                value={data.pre_title}
-                onChange={(e) => setData({ ...data, pre_title: e.target.value })}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-                placeholder="SİZE ÖZEL DAİRELER"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Ana Başlık (El yazısı stili)</label>
-              <input
-                type="text"
-                value={data.title}
-                onChange={(e) => setData({ ...data, title: e.target.value })}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-                placeholder="Size Özel Yaşam"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Alt Başlık (Kalın)</label>
-              <input
-                type="text"
-                value={data.highlight_word}
-                onChange={(e) => setData({ ...data, highlight_word: e.target.value })}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-                placeholder="MODERN YAŞAM"
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* Rozet (Badge) */}
-        <div className="bg-white rounded-xl shadow-sm p-6">
-          <h2 className="text-lg font-semibold text-gray-800 mb-4">Altın Rozet</h2>
-          <div className="grid md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Rozet Ana Metin</label>
-              <input
-                type="text"
-                value={data.badge_text}
-                onChange={(e) => setData({ ...data, badge_text: e.target.value })}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-                placeholder="3+1"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Rozet Alt Metin</label>
-              <input
-                type="text"
-                value={data.badge_subtext}
-                onChange={(e) => setData({ ...data, badge_subtext: e.target.value })}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-                placeholder="DAİRELER"
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* CTA Butonu */}
-        <div className="bg-white rounded-xl shadow-sm p-6">
-          <h2 className="text-lg font-semibold text-gray-800 mb-4">CTA Butonu</h2>
-          <div className="grid md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Buton Metni</label>
-              <input
-                type="text"
-                value={data.primary_cta?.text || ''}
-                onChange={(e) => setData({ ...data, primary_cta: { text: e.target.value, link: data.primary_cta?.link || '/projeler', variant: 'primary' } })}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-                placeholder="İNCELE"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Buton Link</label>
-              <input
-                type="text"
-                value={data.primary_cta?.link || ''}
-                onChange={(e) => setData({ ...data, primary_cta: { text: data.primary_cta?.text || 'İNCELE', link: e.target.value, variant: 'primary' } })}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-                placeholder="/projeler"
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* Kaydet */}
-        <div className="flex justify-end">
-          <button
-            type="submit"
-            disabled={saving}
-            className="flex items-center px-8 py-4 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition-colors disabled:opacity-50"
-          >
-            {saving ? (
-              <>
-                <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                Kaydediliyor...
-              </>
-            ) : (
-              <>
-                <Save className="w-5 h-5 mr-2" />
-                Kaydet
-              </>
-            )}
-          </button>
-        </div>
-      </form>
+      )}
     </div>
   )
 }

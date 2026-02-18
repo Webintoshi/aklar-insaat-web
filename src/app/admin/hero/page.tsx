@@ -2,16 +2,16 @@ import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
 import { ArrowLeft, Edit, Plus, Eye, EyeOff } from 'lucide-react'
 
-async function getHeroSections() {
+async function getHeroBanners() {
   const supabase = await createClient()
   
   const { data, error } = await supabase
-    .from('hero_sections')
+    .from('hero_banners')
     .select('*')
     .order('order_index', { ascending: true })
   
   if (error) {
-    console.error('Error fetching hero sections:', error)
+    console.error('Error fetching hero banners:', error)
     return []
   }
   
@@ -19,7 +19,7 @@ async function getHeroSections() {
 }
 
 export default async function HeroPage() {
-  const sections = await getHeroSections()
+  const banners = await getHeroBanners()
   
   return (
     <div>
@@ -55,18 +55,18 @@ export default async function HeroPage() {
           </thead>
           <tbody className="divide-y divide-gray-100">
             {sections.map((section) => (
-              <tr key={section.id} className="hover:bg-gray-50">
+              <tr key={banner.id} className="hover:bg-gray-50">
                 <td className="px-6 py-4">
-                  <div className="font-medium text-gray-900">{section.title}</div>
-                  {section.highlight_word && (
+                  <div className="font-medium text-gray-900">{banner.title}</div>
+                  {banner.subtitle && (
                     <div className="text-sm text-gray-500">
-                      Vurgu: <span className="text-amber-600">{section.highlight_word}</span>
+                      Alt başlık: <span className="text-gray-600">{banner.subtitle}</span>
                     </div>
                   )}
                 </td>
-                <td className="px-6 py-4 text-gray-600">{section.pre_title}</td>
+                <td className="px-6 py-4 text-gray-600">{banner.button_text}</td>
                 <td className="px-6 py-4">
-                  {section.is_active ? (
+                  {banner.is_active ? (
                     <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
                       <Eye className="w-3 h-3 mr-1" />
                       Aktif
@@ -78,10 +78,10 @@ export default async function HeroPage() {
                     </span>
                   )}
                 </td>
-                <td className="px-6 py-4 text-gray-600">{section.order_index}</td>
+                <td className="px-6 py-4 text-gray-600">{banner.order_index}</td>
                 <td className="px-6 py-4 text-right">
                   <Link
-                    href={`/admin/hero/${section.id}`}
+                    href={`/admin/hero/${banner.id}`}
                     className="inline-flex items-center px-3 py-1.5 text-sm font-medium text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors"
                   >
                     <Edit className="w-4 h-4 mr-1" />
@@ -93,15 +93,15 @@ export default async function HeroPage() {
           </tbody>
         </table>
         
-        {sections.length === 0 && (
+        {banners.length === 0 && (
           <div className="text-center py-12">
-            <p className="text-gray-500">Henüz hero bölümü eklenmemiş.</p>
+            <p className="text-gray-500">Henüz banner eklenmemiş.</p>
             <Link
               href="/admin/hero/new"
               className="inline-flex items-center mt-4 text-blue-600 hover:text-blue-700 font-medium"
             >
               <Plus className="w-4 h-4 mr-1" />
-              İlk Hero Bölümünü Ekle
+              İlk Banner Ekle
             </Link>
           </div>
         )}
