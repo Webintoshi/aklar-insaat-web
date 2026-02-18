@@ -30,9 +30,9 @@ const navigation = [
 
 export function Sidebar() {
   const pathname = usePathname()
-  const supabase = createClient()
 
   const handleSignOut = async () => {
+    const supabase = createClient()
     await supabase.auth.signOut()
     window.location.href = '/auth/login'
   }

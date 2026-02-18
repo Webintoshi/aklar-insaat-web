@@ -17,10 +17,18 @@ const nextConfig: NextConfig = {
       },
     ],
   },
-  // Environment variables that should be available at build time
+  // /admin/login -> /auth/login rewrite
+  async rewrites() {
+    return [
+      {
+        source: '/admin/login',
+        destination: '/auth/login',
+      },
+    ]
+  },
+  // Environment variables
   env: {
     NEXT_PUBLIC_SITE_URL: process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000',
-    // Supabase env vars - Build time'da client'a expose ediliyor
     NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
     NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
   },
