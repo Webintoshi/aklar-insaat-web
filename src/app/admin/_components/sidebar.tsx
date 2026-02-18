@@ -34,7 +34,7 @@ export function Sidebar() {
 
   const handleSignOut = async () => {
     await supabase.auth.signOut()
-    window.location.href = '/admin/login'
+    window.location.href = '/auth/login'
   }
 
   return (

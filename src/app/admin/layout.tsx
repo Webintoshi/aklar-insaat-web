@@ -7,7 +7,6 @@ export default async function AdminLayout({
 }: {
   children: React.ReactNode
 }) {
-  // Middleware zaten auth kontrolü yaptı, burada sadece user bilgisini alıyoruz
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 

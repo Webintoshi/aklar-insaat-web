@@ -4,13 +4,14 @@ import type { NextRequest } from 'next/server'
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
 
-  // Sadece /admin path'leri için çalış
-  if (!pathname.startsWith('/admin')) {
-    return NextResponse.next()
+  // /admin/login → /auth/login rewrite
+  if (pathname === '/admin/login') {
+    const authLoginUrl = new URL('/auth/login', request.url)
+    return NextResponse.rewrite(authLoginUrl)
   }
 
-  // /admin/login sayfasını bypass et
-  if (pathname === '/admin/login') {
+  // Sadece /admin path'leri için auth kontrolü yap (login hariç)
+  if (!pathname.startsWith('/admin')) {
     return NextResponse.next()
   }
 
@@ -20,7 +21,7 @@ export async function middleware(request: NextRequest) {
 
   // Token yoksa login'e yönlendir
   if (!authToken && !refreshToken) {
-    const loginUrl = new URL('/admin/login', request.url)
+    const loginUrl = new URL('/auth/login', request.url)
     return NextResponse.redirect(loginUrl)
   }
 
@@ -28,5 +29,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/admin/:path*']
+  matcher: ['/admin/:path*', '/auth/login']
 }

@@ -1,4 +1,4 @@
-import { redirect } from 'next/navigation'
+﻿import { redirect } from 'next/navigation'
 
 export default function ProjectsPage() {
   redirect('/admin/projects/completed')

@@ -329,6 +329,23 @@ export async function getProjects(options?: { status?: 'completed' | 'ongoing'; 
   }))
 }
 
+export async function getProjectBySlug(slug: string): Promise<Project | null> {
+  const supabase = await createClient()
+  const { data } = await supabase
+    .from('projects')
+    .select(`*, images:project_images(*)`)
+    .eq('slug', slug)
+    .eq('is_published', true)
+    .single()
+  
+  if (!data) return null
+  
+  return {
+    ...data,
+    features: data.features || [],
+  }
+}
+
 export async function getVideoSection(): Promise<VideoSection> {
   const supabase = await createClient()
   const { data } = await supabase
