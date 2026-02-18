@@ -99,31 +99,48 @@ export default function HeroNewPage() {
     }
   }
 
+  const [saveError, setSaveError] = useState<string | null>(null)
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setSaving(true)
+    setSaveError(null)
 
     try {
+      // Önce mevcut banner'ları sil
       const { error: deleteError } = await supabase.from('hero_banners').delete().neq('id', '00000000-0000-0000-0000-000000000000')
+      
+      if (deleteError) {
+        console.error('Delete error:', deleteError)
+        throw new Error('Mevcut bannerlar silinirken hata: ' + deleteError.message)
+      }
 
       const bannersToSave = banners.filter(b => b.desktop_image || b.mobile_image)
       
+      if (bannersToSave.length === 0) {
+        router.push('/admin')
+        return
+      }
+
       for (let i = 0; i < bannersToSave.length; i++) {
         const banner = {
           ...bannersToSave[i],
           order_index: i,
         }
+        delete banner.id // Yeni kayıt için id'yi kaldır
 
-        if (banner.id) {
-          await supabase.from('hero_banners').update(banner).eq('id', banner.id)
-        } else {
-          await supabase.from('hero_banners').insert(banner)
+        const { error: insertError } = await supabase.from('hero_banners').insert(banner)
+        
+        if (insertError) {
+          console.error('Insert error:', insertError)
+          throw new Error(`Banner ${i + 1} kaydedilirken hata: ${insertError.message}`)
         }
       }
 
       router.push('/admin')
-    } catch (error) {
+    } catch (error: any) {
       console.error('Save error:', error)
+      setSaveError(error.message || 'Kaydetme sırasında bir hata oluştu')
     } finally {
       setSaving(false)
     }
@@ -173,10 +190,14 @@ export default function HeroNewPage() {
         </button>
       </div>
 
-      {uploadError && (
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6 flex items-center">
-          <AlertCircle className="w-5 h-5 text-red-600 mr-2 flex-shrink-0" />
-          <span className="text-red-700">{uploadError}</span>
+      {(uploadError || saveError) && (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+          <div className="flex items-center">
+            <AlertCircle className="w-5 h-5 text-red-600 mr-2 flex-shrink-0" />
+            <span className="text-red-700 font-medium">Hata!</span>
+          </div>
+          {uploadError && <p className="text-red-700 mt-1 text-sm">{uploadError}</p>}
+          {saveError && <p className="text-red-700 mt-1 text-sm">{saveError}</p>}
         </div>
       )}
 
