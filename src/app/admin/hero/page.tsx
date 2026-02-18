@@ -54,7 +54,7 @@ export default async function HeroPage() {
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
-            {sections.map((section) => (
+            {banners.map((banner) => (
               <tr key={banner.id} className="hover:bg-gray-50">
                 <td className="px-6 py-4">
                   <div className="font-medium text-gray-900">{banner.title}</div>
