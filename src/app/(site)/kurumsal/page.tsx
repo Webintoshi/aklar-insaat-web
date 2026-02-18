@@ -1,6 +1,7 @@
 import { Metadata } from 'next'
 import Image from 'next/image'
 
+// Kurumsal page with site layout (Header + Footer)
 export const metadata: Metadata = {
   title: 'Kurumsal | Aklar İnşaat',
   description: 'Aklar İnşaat hakkında bilgi. Vizyon, misyon ve değerlerimiz.',
