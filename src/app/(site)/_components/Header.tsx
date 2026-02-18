@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { Menu, X, Phone, ChevronDown, Instagram, Facebook, LayoutGrid } from 'lucide-react'
+import { Menu, X, Phone, ChevronDown, Instagram, Facebook, Linkedin, LayoutGrid } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 
 const navLinks = [
@@ -39,22 +39,53 @@ export function Header({ phone = '0545 727 72 97' }: HeaderProps) {
 
   return (
     <>
+      {/* TopBar + Header Container */}
       <motion.header
         initial={{ y: -100 }}
         animate={{ y: 0 }}
         transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
         className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
-          isScrolled ? 'bg-white/95 backdrop-blur-md shadow-lg' : 'bg-transparent'
+          isScrolled ? 'bg-white/95 backdrop-blur-md shadow-lg' : 'bg-white'
         }`}
       >
+        {/* TopBar */}
+        <div className={`border-b border-gray-100 transition-all duration-300 ${isScrolled ? 'h-0 opacity-0 overflow-hidden' : 'h-10 opacity-100'}`}>
+          <div className="container mx-auto px-4 sm:px-6 lg:px-8 xl:px-12 h-full">
+            <div className="flex items-center justify-end h-full gap-6">
+              {/* Social Links */}
+              <div className="flex items-center gap-4">
+                <a href="https://instagram.com" target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-[#CF000C] transition-colors">
+                  <Instagram className="w-4 h-4" />
+                </a>
+                <a href="https://facebook.com" target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-[#CF000C] transition-colors">
+                  <Facebook className="w-4 h-4" />
+                </a>
+                <a href="https://linkedin.com" target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-[#CF000C] transition-colors">
+                  <Linkedin className="w-4 h-4" />
+                </a>
+              </div>
+
+              {/* Divider */}
+              <div className="w-px h-4 bg-gray-200" />
+
+              {/* Phone */}
+              <a href={`tel:${phone.replace(/\s/g, '')}`} className="flex items-center gap-2 text-sm text-gray-600 hover:text-[#CF000C] transition-colors">
+                <Phone className="w-4 h-4" />
+                <span>{phone}</span>
+              </a>
+            </div>
+          </div>
+        </div>
+
+        {/* Main Header */}
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-20">
+          <div className={`flex items-center justify-between transition-all duration-300 ${isScrolled ? 'h-16' : 'h-20'}`}>
             {/* Logo */}
             <Link href="/" className="flex items-center gap-2">
               <img 
                 src="/logoypng_48.png" 
                 alt="Aklar İnşaat" 
-                className="h-10 w-auto object-contain"
+                className={`w-auto object-contain transition-all duration-300 ${isScrolled ? 'h-8' : 'h-10'}`}
               />
             </Link>
 
@@ -69,9 +100,7 @@ export function Header({ phone = '0545 727 72 97' }: HeaderProps) {
                 >
                   <Link
                     href={link.href}
-                    className={`flex items-center gap-1 text-sm font-semibold tracking-wide transition-colors hover:text-red-600 ${
-                      isScrolled ? 'text-gray-800' : 'text-gray-800'
-                    }`}
+                    className="flex items-center gap-1 text-sm font-semibold tracking-wide text-gray-800 transition-colors hover:text-[#CF000C]"
                   >
                     {link.label}
                     {link.dropdown && <ChevronDown className="w-4 h-4" />}
@@ -90,7 +119,7 @@ export function Header({ phone = '0545 727 72 97' }: HeaderProps) {
                           <Link
                             key={item.href}
                             href={item.href}
-                            className="block px-4 py-3 text-sm text-gray-700 hover:bg-red-50 hover:text-red-600 transition-colors"
+                            className="block px-4 py-3 text-sm text-gray-700 hover:bg-[#CF000C]/10 hover:text-[#CF000C] transition-colors"
                           >
                             {item.label}
                           </Link>
@@ -106,18 +135,16 @@ export function Header({ phone = '0545 727 72 97' }: HeaderProps) {
             <div className="flex items-center gap-4">
               {/* Social & Phone - Desktop */}
               <div className="hidden xl:flex items-center gap-4">
-                <a href="https://instagram.com" target="_blank" rel="noopener noreferrer" 
-                  className={`transition-colors hover:text-red-600 ${isScrolled ? 'text-gray-600' : 'text-gray-600'}`}>
+                <a href="https://instagram.com" target="_blank" rel="noopener noreferrer" className="text-gray-600 hover:text-[#CF000C] transition-colors">
                   <Instagram className="w-5 h-5" />
                 </a>
-                <a href="https://facebook.com" target="_blank" rel="noopener noreferrer"
-                  className={`transition-colors hover:text-red-600 ${isScrolled ? 'text-gray-600' : 'text-gray-600'}`}>
+                <a href="https://facebook.com" target="_blank" rel="noopener noreferrer" className="text-gray-600 hover:text-[#CF000C] transition-colors">
                   <Facebook className="w-5 h-5" />
                 </a>
-                <a href={`tel:${phone.replace(/\s/g, '')}`} 
-                  className={`flex items-center gap-2 text-sm font-semibold transition-colors hover:text-red-600 ${
-                    isScrolled ? 'text-gray-800' : 'text-gray-800'
-                  }`}>
+                <a href="https://linkedin.com" target="_blank" rel="noopener noreferrer" className="text-gray-600 hover:text-[#CF000C] transition-colors">
+                  <Linkedin className="w-5 h-5" />
+                </a>
+                <a href={`tel:${phone.replace(/\s/g, '')}`} className="flex items-center gap-2 text-sm font-semibold text-gray-800 transition-colors hover:text-[#CF000C]">
                   <Phone className="w-4 h-4" />
                   {phone}
                 </a>
@@ -126,7 +153,7 @@ export function Header({ phone = '0545 727 72 97' }: HeaderProps) {
               {/* CTA Button */}
               <Link
                 href="/daire-secimi"
-                className="hidden sm:flex items-center gap-2 px-5 py-2.5 bg-red-600 text-white text-sm font-semibold rounded hover:bg-red-700 transition-colors"
+                className="hidden sm:flex items-center gap-2 px-5 py-2.5 bg-[#CF000C] text-white text-sm font-semibold rounded hover:bg-[#a8000a] transition-colors"
               >
                 <LayoutGrid className="w-4 h-4" />
                 Daire Seçimi
@@ -135,9 +162,7 @@ export function Header({ phone = '0545 727 72 97' }: HeaderProps) {
               {/* Mobile Menu Button */}
               <button
                 onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-                className={`lg:hidden p-2 rounded-lg transition-colors ${
-                  isScrolled ? 'text-gray-800' : 'text-gray-800'
-                }`}
+                className="lg:hidden p-2 rounded-lg text-gray-800 transition-colors"
               >
                 {isMobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
               </button>
@@ -165,7 +190,7 @@ export function Header({ phone = '0545 727 72 97' }: HeaderProps) {
             >
               <div className="p-6 pt-20">
                 <div className="flex items-center gap-3 mb-8">
-                  <Phone className="w-5 h-5 text-red-600" />
+                  <Phone className="w-5 h-5 text-[#CF000C]" />
                   <span className="font-semibold text-gray-800">{phone}</span>
                 </div>
                 
@@ -175,7 +200,7 @@ export function Header({ phone = '0545 727 72 97' }: HeaderProps) {
                       <Link
                         href={link.href}
                         onClick={() => setIsMobileMenuOpen(false)}
-                        className="block py-3 px-4 text-lg font-semibold text-gray-800 hover:bg-red-50 hover:text-red-600 rounded-lg transition-colors"
+                        className="block py-3 px-4 text-lg font-semibold text-gray-800 hover:bg-[#CF000C]/10 hover:text-[#CF000C] rounded-lg transition-colors"
                       >
                         {link.label}
                       </Link>
@@ -186,7 +211,7 @@ export function Header({ phone = '0545 727 72 97' }: HeaderProps) {
                               key={item.href}
                               href={item.href}
                               onClick={() => setIsMobileMenuOpen(false)}
-                              className="block py-2 px-4 text-sm text-gray-600 hover:text-red-600"
+                              className="block py-2 px-4 text-sm text-gray-600 hover:text-[#CF000C]"
                             >
                               {item.label}
                             </Link>
@@ -201,7 +226,7 @@ export function Header({ phone = '0545 727 72 97' }: HeaderProps) {
                   <Link
                     href="/daire-secimi"
                     onClick={() => setIsMobileMenuOpen(false)}
-                    className="flex items-center justify-center gap-2 w-full py-3 bg-red-600 text-white font-semibold rounded-lg hover:bg-red-700 transition-colors"
+                    className="flex items-center justify-center gap-2 w-full py-3 bg-[#CF000C] text-white font-semibold rounded-lg hover:bg-[#a8000a] transition-colors"
                   >
                     <LayoutGrid className="w-4 h-4" />
                     Daire Seçimi

@@ -13,6 +13,7 @@ import {
   Info,
   Video,
   BarChart3,
+  MessageCircle,
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 
@@ -26,6 +27,7 @@ const navigation = [
   { name: 'Tamamlanmış Projeler', href: '/admin/projects/completed', icon: Building2 },
   { name: 'Devam Eden Projeler', href: '/admin/projects/ongoing', icon: FolderKanban },
   { name: 'İletişim Mesajları', href: '/admin/messages', icon: MessageSquare },
+  { name: 'WhatsApp', href: '/admin/whatsapp', icon: MessageCircle },
 ]
 
 export function Sidebar() {

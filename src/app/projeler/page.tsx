@@ -20,7 +20,7 @@ export default async function ProjectsPage({
   return (
     <main className="min-h-screen bg-[#FAFAF8]">
       {/* Hero Section */}
-      <section className="bg-[#1E3A5F] py-20 lg:py-28">
+      <section className="bg-[#1E3A5F] py-12 lg:py-16">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 xl:px-12">
           <div className="max-w-3xl">
             <p className="text-[#CF000C] text-sm uppercase tracking-[0.2em] mb-4 font-medium">
