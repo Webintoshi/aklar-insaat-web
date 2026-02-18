@@ -32,8 +32,12 @@ CREATE TABLE IF NOT EXISTS hero_sections (
     CHECK (background_type IN ('image', 'video', 'slider')),
   background_image TEXT,                    -- Ana görsel URL (R2)
   background_video TEXT,                    -- Video URL (YouTube/Vimeo ID veya direct)
-  slider_images JSONB DEFAULT '[]',         -- ["url1", "url2", "url3"]
+  slider_images JSONB DEFAULT '[]',         -- [{"id": "1", "image": "url", "title": "..."}]
   show_gradient_overlay BOOLEAN DEFAULT true,
+  
+  -- Slider Ayarları
+  autoplay BOOLEAN DEFAULT true,
+  autoplay_speed INTEGER DEFAULT 5000,     -- Milisaniye
   
   -- İçerik (Sağ taraf)
   pre_title VARCHAR(255) DEFAULT 'SİZE ÖZEL DAİRELER',

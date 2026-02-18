@@ -3,8 +3,20 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { ArrowLeft, Loader2, Save } from 'lucide-react'
+import { ArrowLeft, Loader2, Save, Plus, Trash2, GripVertical } from 'lucide-react'
 import Link from 'next/link'
+
+interface Slide {
+  id: string
+  image: string
+  pre_title?: string
+  title?: string
+  highlight_word?: string
+  badge_text?: string
+  badge_subtext?: string
+  cta_text?: string
+  cta_link?: string
+}
 
 interface HeroSection {
   id: string
@@ -13,8 +25,7 @@ interface HeroSection {
   order_index: number
   background_type: 'image' | 'video' | 'slider'
   background_image: string
-  background_video: string | null
-  slider_images: string[]
+  slider_images: Slide[]
   pre_title: string
   title: string
   highlight_word: string
@@ -23,8 +34,8 @@ interface HeroSection {
   badge_subtext: string
   primary_cta: { text: string; link: string; variant: string }
   secondary_cta: { text: string; link: string; variant: string }
-  stats: { label: string; value: string }[]
-  show_gradient_overlay: boolean
+  autoplay: boolean
+  autoplay_speed: number
 }
 
 export default function HeroEditorPage({ params }: { params: { _id: string } }) {
@@ -38,9 +49,8 @@ export default function HeroEditorPage({ params }: { params: { _id: string } }) 
     name: '',
     is_active: true,
     order_index: 0,
-    background_type: 'image',
+    background_type: 'slider',
     background_image: '',
-    background_video: '',
     slider_images: [],
     pre_title: 'SİZE ÖZEL DAİRELER',
     title: 'Size Özel Yaşam',
@@ -50,8 +60,8 @@ export default function HeroEditorPage({ params }: { params: { _id: string } }) 
     badge_subtext: 'DAİRELER',
     primary_cta: { text: 'İNCELE', link: '/projeler', variant: 'primary' },
     secondary_cta: { text: '', link: '', variant: 'outline' },
-    stats: [],
-    show_gradient_overlay: true,
+    autoplay: true,
+    autoplay_speed: 5000,
   })
 
   useEffect(() => {
@@ -72,12 +82,12 @@ export default function HeroEditorPage({ params }: { params: { _id: string } }) 
       setData({
         ...hero,
         slider_images: hero.slider_images || [],
-        stats: hero.stats || [],
         primary_cta: hero.primary_cta || { text: 'İNCELE', link: '/projeler', variant: 'primary' },
         secondary_cta: hero.secondary_cta || { text: '', link: '', variant: 'outline' },
         badge_text: hero.badge_text || '3+1',
         badge_subtext: hero.badge_subtext || 'DAİRELER',
-        show_gradient_overlay: hero.show_gradient_overlay !== false,
+        autoplay: hero.autoplay !== false,
+        autoplay_speed: hero.autoplay_speed || 5000,
       })
     }
     setLoading(false)
@@ -89,8 +99,7 @@ export default function HeroEditorPage({ params }: { params: { _id: string } }) 
 
     const payload = {
       ...data,
-      slider_images: data.slider_images?.filter(Boolean) || [],
-      stats: data.stats?.filter(s => s.label && s.value) || [],
+      slider_images: data.slider_images?.filter(s => s.image) || [],
     }
 
     if (isNew) {
@@ -102,6 +111,31 @@ export default function HeroEditorPage({ params }: { params: { _id: string } }) 
     }
     
     setSaving(false)
+  }
+
+  const addSlide = () => {
+    const newSlide: Slide = {
+      id: Date.now().toString(),
+      image: '',
+      pre_title: data.pre_title,
+      title: data.title,
+      highlight_word: data.highlight_word,
+      badge_text: data.badge_text,
+      badge_subtext: data.badge_subtext,
+      cta_text: data.primary_cta?.text,
+      cta_link: data.primary_cta?.link,
+    }
+    setData({ ...data, slider_images: [...(data.slider_images || []), newSlide] })
+  }
+
+  const removeSlide = (index: number) => {
+    setData({ ...data, slider_images: data.slider_images?.filter((_, i) => i !== index) || [] })
+  }
+
+  const updateSlide = (index: number, field: keyof Slide, value: string) => {
+    const newSlides = [...(data.slider_images || [])]
+    newSlides[index] = { ...newSlides[index], [field]: value }
+    setData({ ...data, slider_images: newSlides })
   }
 
   if (loading) {
@@ -129,7 +163,7 @@ export default function HeroEditorPage({ params }: { params: { _id: string } }) 
         {/* Temel Bilgiler */}
         <div className="bg-white rounded-xl shadow-sm p-6">
           <h2 className="text-lg font-semibold text-gray-800 mb-4">Temel Bilgiler</h2>
-          <div className="grid md:grid-cols-3 gap-4">
+          <div className="grid md:grid-cols-4 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Bölüm Adı</label>
               <input
@@ -140,6 +174,17 @@ export default function HeroEditorPage({ params }: { params: { _id: string } }) 
                 placeholder="Ana Sayfa Hero"
                 required
               />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Tip</label>
+              <select
+                value={data.background_type}
+                onChange={(e) => setData({ ...data, background_type: e.target.value as any })}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+              >
+                <option value="image">Tek Görsel</option>
+                <option value="slider">Slider (1920x800)</option>
+              </select>
             </div>
             <div className="flex items-center">
               <label className="flex items-center mt-8">
@@ -164,125 +209,237 @@ export default function HeroEditorPage({ params }: { params: { _id: string } }) 
           </div>
         </div>
 
-        {/* Arka Plan */}
-        <div className="bg-white rounded-xl shadow-sm p-6">
-          <h2 className="text-lg font-semibold text-gray-800 mb-4">Arka Plan</h2>
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Arka Plan Görseli URL</label>
-              <input
-                type="text"
-                value={data.background_image}
-                onChange={(e) => setData({ ...data, background_image: e.target.value })}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-                placeholder="https://..."
-                required
-              />
-            </div>
-            <div className="flex items-center">
-              <label className="flex items-center">
+        {/* Slider Ayarları */}
+        {data.background_type === 'slider' && (
+          <div className="bg-white rounded-xl shadow-sm p-6">
+            <h2 className="text-lg font-semibold text-gray-800 mb-4">Slider Ayarları</h2>
+            <div className="grid md:grid-cols-2 gap-4">
+              <div className="flex items-center">
+                <label className="flex items-center">
+                  <input
+                    type="checkbox"
+                    checked={data.autoplay}
+                    onChange={(e) => setData({ ...data, autoplay: e.target.checked })}
+                    className="w-4 h-4 text-blue-600 rounded"
+                  />
+                  <span className="ml-2 text-sm text-gray-700">Otomatik geçiş</span>
+                </label>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Geçiş süresi (ms)</label>
                 <input
-                  type="checkbox"
-                  checked={data.show_gradient_overlay}
-                  onChange={(e) => setData({ ...data, show_gradient_overlay: e.target.checked })}
-                  className="w-4 h-4 text-blue-600 rounded"
+                  type="number"
+                  value={data.autoplay_speed}
+                  onChange={(e) => setData({ ...data, autoplay_speed: parseInt(e.target.value) || 5000 })}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                  min="1000"
+                  step="500"
                 />
-                <span className="ml-2 text-sm text-gray-700">Gradient overlay göster</span>
-              </label>
+              </div>
             </div>
           </div>
-        </div>
+        )}
 
-        {/* İçerik - Sağ Taraf */}
-        <div className="bg-white rounded-xl shadow-sm p-6">
-          <h2 className="text-lg font-semibold text-gray-800 mb-4">İçerik (Sağ Taraf)</h2>
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Üst Başlık (Pre-title)</label>
-              <input
-                type="text"
-                value={data.pre_title}
-                onChange={(e) => setData({ ...data, pre_title: e.target.value })}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-                placeholder="SİZE ÖZEL DAİRELER"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Ana Başlık (El yazısı stili)</label>
-              <input
-                type="text"
-                value={data.title}
-                onChange={(e) => setData({ ...data, title: e.target.value })}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-                placeholder="Size Özel Yaşam"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Alt Başlık (Kalın)</label>
-              <input
-                type="text"
-                value={data.highlight_word}
-                onChange={(e) => setData({ ...data, highlight_word: e.target.value })}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-                placeholder="MODERN YAŞAM"
-              />
-            </div>
+        {/* Tek Görsel Modu */}
+        {data.background_type === 'image' && (
+          <div className="bg-white rounded-xl shadow-sm p-6">
+            <h2 className="text-lg font-semibold text-gray-800 mb-4">Arka Plan Görseli (1920x800)</h2>
+            <input
+              type="text"
+              value={data.background_image}
+              onChange={(e) => setData({ ...data, background_image: e.target.value })}
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+              placeholder="https://..."
+            />
           </div>
-        </div>
+        )}
 
-        {/* Rozet (Badge) */}
-        <div className="bg-white rounded-xl shadow-sm p-6">
-          <h2 className="text-lg font-semibold text-gray-800 mb-4">Altın Rozet</h2>
-          <div className="grid md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Rozet Ana Metin</label>
-              <input
-                type="text"
-                value={data.badge_text}
-                onChange={(e) => setData({ ...data, badge_text: e.target.value })}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-                placeholder="3+1"
-              />
+        {/* Slider Modu */}
+        {data.background_type === 'slider' && (
+          <div className="bg-white rounded-xl shadow-sm p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold text-gray-800">Slider Görselleri (1920x800)</h2>
+              <button
+                type="button"
+                onClick={addSlide}
+                className="flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors"
+              >
+                <Plus className="w-5 h-5 mr-2" />
+                Slide Ekle
+              </button>
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Rozet Alt Metin</label>
-              <input
-                type="text"
-                value={data.badge_subtext}
-                onChange={(e) => setData({ ...data, badge_subtext: e.target.value })}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-                placeholder="DAİRELER"
-              />
-            </div>
-          </div>
-        </div>
 
-        {/* CTA Butonu */}
-        <div className="bg-white rounded-xl shadow-sm p-6">
-          <h2 className="text-lg font-semibold text-gray-800 mb-4">CTA Butonu</h2>
-          <div className="grid md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Buton Metni</label>
-              <input
-                type="text"
-                value={data.primary_cta?.text || ''}
-                onChange={(e) => setData({ ...data, primary_cta: { text: e.target.value, link: data.primary_cta?.link || '/projeler', variant: 'primary' } })}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-                placeholder="İNCELE"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Buton Link</label>
-              <input
-                type="text"
-                value={data.primary_cta?.link || ''}
-                onChange={(e) => setData({ ...data, primary_cta: { text: data.primary_cta?.text || 'İNCELE', link: e.target.value, variant: 'primary' } })}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-                placeholder="/projeler"
-              />
+            <div className="space-y-4">
+              {data.slider_images?.map((slide, index) => (
+                <div key={slide.id} className="border border-gray-200 rounded-xl p-4 space-y-4">
+                  <div className="flex items-center gap-3 mb-4">
+                    <GripVertical className="w-5 h-5 text-gray-400" />
+                    <span className="font-semibold text-gray-700">Slide {index + 1}</span>
+                    <button
+                      type="button"
+                      onClick={() => removeSlide(index)}
+                      className="ml-auto p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                    >
+                      <Trash2 className="w-5 h-5" />
+                    </button>
+                  </div>
+
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <div className="md:col-span-2">
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Görsel URL (1920x800)</label>
+                      <input
+                        type="text"
+                        value={slide.image}
+                        onChange={(e) => updateSlide(index, 'image', e.target.value)}
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                        placeholder="https://..."
+                        required
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Üst Başlık</label>
+                      <input
+                        type="text"
+                        value={slide.pre_title || ''}
+                        onChange={(e) => updateSlide(index, 'pre_title', e.target.value)}
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                        placeholder="SİZE ÖZEL DAİRELER"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Ana Başlık (El yazısı)</label>
+                      <input
+                        type="text"
+                        value={slide.title || ''}
+                        onChange={(e) => updateSlide(index, 'title', e.target.value)}
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                        placeholder="Size Özel Yaşam"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Alt Başlık (Kalın)</label>
+                      <input
+                        type="text"
+                        value={slide.highlight_word || ''}
+                        onChange={(e) => updateSlide(index, 'highlight_word', e.target.value)}
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                        placeholder="MODERN YAŞAM"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Rozet Metin</label>
+                      <input
+                        type="text"
+                        value={slide.badge_text || ''}
+                        onChange={(e) => updateSlide(index, 'badge_text', e.target.value)}
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                        placeholder="3+1"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Rozet Alt Metin</label>
+                      <input
+                        type="text"
+                        value={slide.badge_subtext || ''}
+                        onChange={(e) => updateSlide(index, 'badge_subtext', e.target.value)}
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                        placeholder="DAİRELER"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Buton Metni</label>
+                      <input
+                        type="text"
+                        value={slide.cta_text || ''}
+                        onChange={(e) => updateSlide(index, 'cta_text', e.target.value)}
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                        placeholder="İNCELE"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Buton Link</label>
+                      <input
+                        type="text"
+                        value={slide.cta_link || ''}
+                        onChange={(e) => updateSlide(index, 'cta_link', e.target.value)}
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                        placeholder="/projeler"
+                      />
+                    </div>
+                  </div>
+                </div>
+              ))}
+              {(!data.slider_images || data.slider_images.length === 0) && (
+                <div className="text-center py-12 border-2 border-dashed border-gray-300 rounded-xl">
+                  <p className="text-gray-500 mb-4">Henüz slide eklenmemiş</p>
+                  <button
+                    type="button"
+                    onClick={addSlide}
+                    className="inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors"
+                  >
+                    <Plus className="w-5 h-5 mr-2" />
+                    İlk Slide'ı Ekle
+                  </button>
+                </div>
+              )}
             </div>
           </div>
-        </div>
+        )}
+
+        {/* Varsayılan Değerler (Slider için) */}
+        {data.background_type === 'slider' && (
+          <div className="bg-white rounded-xl shadow-sm p-6">
+            <h2 className="text-lg font-semibold text-gray-800 mb-4">Varsayılan Değerler (Slide'lerde boş alanlar için)</h2>
+            <div className="grid md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Varsayılan Üst Başlık</label>
+                <input
+                  type="text"
+                  value={data.pre_title}
+                  onChange={(e) => setData({ ...data, pre_title: e.target.value })}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Varsayılan Ana Başlık</label>
+                <input
+                  type="text"
+                  value={data.title}
+                  onChange={(e) => setData({ ...data, title: e.target.value })}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Varsayılan Alt Başlık</label>
+                <input
+                  type="text"
+                  value={data.highlight_word}
+                  onChange={(e) => setData({ ...data, highlight_word: e.target.value })}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Varsayılan Rozet</label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={data.badge_text}
+                    onChange={(e) => setData({ ...data, badge_text: e.target.value })}
+                    className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                    placeholder="3+1"
+                  />
+                  <input
+                    type="text"
+                    value={data.badge_subtext}
+                    onChange={(e) => setData({ ...data, badge_subtext: e.target.value })}
+                    className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                    placeholder="DAİRELER"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Kaydet */}
         <div className="flex justify-end">

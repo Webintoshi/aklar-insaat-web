@@ -3,13 +3,14 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { ArrowLeft, Loader2, Save } from 'lucide-react'
+import { ArrowLeft, Loader2, Save, BarChart3, Heart } from 'lucide-react'
 import Link from 'next/link'
 
 interface InfoCardsSection {
   id: string
   name: string
   is_active: boolean
+  type: 'stats' | 'values'
   pre_title: string
   title: string
   description: string
@@ -19,6 +20,32 @@ interface InfoCardsSection {
   show_dots: boolean
 }
 
+const defaultStatsData: Partial<InfoCardsSection> = {
+  name: 'İstatistikler',
+  is_active: true,
+  type: 'stats',
+  pre_title: 'Rakamlarla Biz',
+  title: 'Başarı Hikayemiz',
+  description: 'Aklar İnşaat\'ın başarı hikayesi rakamlarla daha da anlamlı',
+  autoplay: true,
+  autoplay_speed: 4000,
+  show_arrows: true,
+  show_dots: true,
+}
+
+const defaultValuesData: Partial<InfoCardsSection> = {
+  name: 'Değerlerimiz',
+  is_active: true,
+  type: 'values',
+  pre_title: 'DEĞERLERİMİZ',
+  title: 'AKLAR İNŞAAT OLARAK BENİMSEDIĞIMIZ DEĞERLERIMIZ',
+  description: '',
+  autoplay: true,
+  autoplay_speed: 4000,
+  show_arrows: true,
+  show_dots: true,
+}
+
 export default function InfoCardsEditorPage({ params }: { params: { _id: string } }) {
   const router = useRouter()
   const supabase = createClient()
@@ -26,17 +53,7 @@ export default function InfoCardsEditorPage({ params }: { params: { _id: string 
   
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
-  const [data, setData] = useState<Partial<InfoCardsSection>>({
-    name: 'İstatistikler',
-    is_active: true,
-    pre_title: 'Rakamlarla Biz',
-    title: 'Başarı Hikayemiz',
-    description: '',
-    autoplay: true,
-    autoplay_speed: 4000,
-    show_arrows: true,
-    show_dots: true,
-  })
+  const [data, setData] = useState<Partial<InfoCardsSection>>(defaultValuesData)
 
   useEffect(() => {
     if (!isNew) {
@@ -56,6 +73,14 @@ export default function InfoCardsEditorPage({ params }: { params: { _id: string 
       setData(section)
     }
     setLoading(false)
+  }
+
+  const handleTypeChange = (type: 'stats' | 'values') => {
+    if (type === 'stats') {
+      setData({ ...defaultStatsData })
+    } else {
+      setData({ ...defaultValuesData })
+    }
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -96,12 +121,68 @@ export default function InfoCardsEditorPage({ params }: { params: { _id: string 
             <ArrowLeft className="w-5 h-5" />
           </Link>
           <h1 className="text-2xl font-bold text-gray-800">
-            {isNew ? 'Yeni İstatistik Bölümü' : 'Bölüm Düzenle'}
+            {isNew ? 'Yeni Kart Bölümü' : 'Bölüm Düzenle'}
           </h1>
         </div>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6 max-w-3xl">
+        {/* Tip Seçimi - Sadece yeni oluştururken */}
+        {isNew && (
+          <div className="bg-white rounded-xl shadow-sm p-6">
+            <h2 className="text-lg font-semibold text-gray-800 mb-4">Bölüm Tipi</h2>
+            <div className="grid grid-cols-2 gap-4">
+              <button
+                type="button"
+                onClick={() => handleTypeChange('stats')}
+                className={`p-4 rounded-xl border-2 transition-all text-left ${
+                  data.type === 'stats'
+                    ? 'border-blue-500 bg-blue-50'
+                    : 'border-gray-200 hover:border-blue-300'
+                }`}
+              >
+                <div className="flex items-center gap-3 mb-2">
+                  <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+                    data.type === 'stats' ? 'bg-blue-500 text-white' : 'bg-gray-100 text-gray-600'
+                  }`}>
+                    <BarChart3 className="w-5 h-5" />
+                  </div>
+                  <span className={`font-semibold ${data.type === 'stats' ? 'text-blue-900' : 'text-gray-700'}`}>
+                    İstatistik Kartları
+                  </span>
+                </div>
+                <p className="text-sm text-gray-500">
+                  Sayılarla başarı hikayesi (örn: 50+ Proje, 1000+ Müşteri)
+                </p>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handleTypeChange('values')}
+                className={`p-4 rounded-xl border-2 transition-all text-left ${
+                  data.type === 'values'
+                    ? 'border-purple-500 bg-purple-50'
+                    : 'border-gray-200 hover:border-purple-300'
+                }`}
+              >
+                <div className="flex items-center gap-3 mb-2">
+                  <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+                    data.type === 'values' ? 'bg-purple-500 text-white' : 'bg-gray-100 text-gray-600'
+                  }`}>
+                    <Heart className="w-5 h-5" />
+                  </div>
+                  <span className={`font-semibold ${data.type === 'values' ? 'text-purple-900' : 'text-gray-700'}`}>
+                    Değer Kartları
+                  </span>
+                </div>
+                <p className="text-sm text-gray-500">
+                  Şirket değerleri ve ilkeler (örn: Güvenilirlik, Kalite)
+                </p>
+              </button>
+            </div>
+          </div>
+        )}
+
         <div className="bg-white rounded-xl shadow-sm p-6">
           <h2 className="text-lg font-semibold text-gray-800 mb-4">Temel Bilgiler</h2>
           <div className="space-y-4">

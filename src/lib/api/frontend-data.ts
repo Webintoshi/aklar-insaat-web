@@ -6,13 +6,25 @@ import { createClient } from '@/lib/supabase/server'
 // TYPES
 // ============================================================
 
+export interface Slide {
+  id: string
+  image: string
+  pre_title?: string
+  title?: string
+  highlight_word?: string
+  badge_text?: string
+  badge_subtext?: string
+  cta_text?: string
+  cta_link?: string
+}
+
 export interface HeroSection {
   id: string
   name: string
   background_type: 'image' | 'video' | 'slider'
   background_image: string
   background_video: string | null
-  slider_images: string[]
+  slider_images: Slide[]
   pre_title: string
   title: string
   highlight_word: string
@@ -23,6 +35,8 @@ export interface HeroSection {
   secondary_cta: { text: string; link: string; variant: string }
   stats: { label: string; value: string }[]
   show_gradient_overlay?: boolean
+  autoplay?: boolean
+  autoplay_speed?: number
 }
 
 export interface AboutSection {
@@ -30,13 +44,17 @@ export interface AboutSection {
   image_url: string
   image_caption: string | null
   experience_badge: { years: number; text: string }
-  pre_title: string
-  title: string
-  highlight_word: string
-  description: string
-  features: { icon: string; title: string; description: string }[]
-  cta_text: string
-  cta_link: string
+  subtitle: string
+  paragraphs: string[]
+  highlight_text: string
+  // Legacy fields (deprecated)
+  pre_title?: string
+  title?: string
+  highlight_word?: string
+  description?: string
+  features?: { icon: string; title: string; description: string }[]
+  cta_text?: string
+  cta_link?: string
 }
 
 export interface VideoSection {
@@ -59,10 +77,12 @@ export interface InfoCard {
   suffix: string | null
   animation_type: 'countUp' | 'static'
   target_number: number | null
+  description: string | null
 }
 
 export interface InfoCardsSection {
   id: string
+  type: 'stats' | 'values'
   pre_title: string
   title: string
   description: string | null
@@ -102,10 +122,33 @@ export interface FooterSettings {
 const defaultHero: HeroSection = {
   id: 'default',
   name: 'Ana Sayfa Hero',
-  background_type: 'image',
+  background_type: 'slider',
   background_image: '/images/hero-banner.jpg',
   background_video: null,
-  slider_images: [],
+  slider_images: [
+    {
+      id: '1',
+      image: '/images/hero-banner.jpg',
+      pre_title: 'SİZE ÖZEL DAİRELER',
+      title: 'Size Özel Yaşam',
+      highlight_word: 'MODERN YAŞAM',
+      badge_text: '3+1',
+      badge_subtext: 'DAİRELER',
+      cta_text: 'İNCELE',
+      cta_link: '/projeler',
+    },
+    {
+      id: '2',
+      image: '/images/hero-banner-2.jpg',
+      pre_title: 'YENİ PROJE',
+      title: 'Lotus Yaşam Evleri',
+      highlight_word: 'TATİL KONSEPTLİ',
+      badge_text: '2+1',
+      badge_subtext: 'DAİRELER',
+      cta_text: 'DETAYLAR',
+      cta_link: '/projeler/lotus-yasam-evleri',
+    },
+  ],
   pre_title: 'SİZE ÖZEL DAİRELER',
   title: 'Size Özel Yaşam',
   highlight_word: 'MODERN YAŞAM',
@@ -116,6 +159,8 @@ const defaultHero: HeroSection = {
   secondary_cta: { text: '', link: '', variant: 'outline' },
   stats: [],
   show_gradient_overlay: true,
+  autoplay: true,
+  autoplay_speed: 5000,
 }
 
 const defaultAbout: AboutSection = {
@@ -123,18 +168,12 @@ const defaultAbout: AboutSection = {
   image_url: '/images/about-building.jpg',
   image_caption: 'Modern Yaşam Projesi',
   experience_badge: { years: 15, text: 'Yıllık Tecrübe' },
-  pre_title: 'Bizi Tanıyın',
-  title: 'Aklar İnşaat',
-  highlight_word: 'Güven',
-  description: 'Aklar İnşaat olarak, 2005 yılından bu yana kaliteli ve modern konut projeleri üretiyoruz. Müşteri memnuniyetini ön planda tutarak, her projemizde estetik ve fonksiyonelliği bir araya getiriyoruz.',
-  features: [
-    { icon: 'Shield', title: 'Güvenilirlik', description: '20 yılı aşkın tecrübemizle her projemizde güvence sunuyoruz.' },
-    { icon: 'Award', title: 'Kalite', description: 'En yüksek kalite standartlarında inşaat yapıyoruz.' },
-    { icon: 'Clock', title: 'Zamanında Teslim', description: 'Projelerimizi söz verdiğimiz tarihte teslim ediyoruz.' },
-    { icon: 'Heart', title: 'Müşteri Memnuniyeti', description: 'Mutlu müşterilerimiz bizim en büyük referansımızdır.' },
+  subtitle: 'AKLAR İNŞAAT',
+  paragraphs: [
+    `Aklar İnşaat, uzun yıllardır Ordu'da hizmet vermektedir. 'Hız ve Kalite Bizim İşimiz' sloganıyla sektöre adım atan firmamız, her geçen gün kendini yenileyerek büyümeye devam etmektedir. Son yıllarda artan iş talebi ve büyümekte olan inşaat sektörü konusunda yaptığımız çalışmalar, şirketin bilgi birikimi ve sahip olduğu uzman kadrosunu, inşaat, proje alanında çalışmaya yöneltmiştir. Aklar İnşaat, kurumsal ve bireysel müşterilerden gelen talepler doğrultusunda standartlara uygun, bilimsel ve güvenilir mühendislik, inşaat işleri hazırlayan bir şirkettir.`,
+    'Sunduğumuz kaliteli, etkin hizmetlerimizle bugün; bölgemizde faaliyet gösteren seçkin ve tercih edilen hizmet kuruluşlarından biri olmanın haklı gururunu yaşamaktayız.'
   ],
-  cta_text: 'Daha Fazla Bilgi',
-  cta_link: '/kurumsal',
+  highlight_text: 'Hem ulaştığımız kitle hemde takım arkadaşlarımız arasında sinerji yaratabilmek için benimsediğimiz değerler; Müşterilerimizin kalite, fiyat, teslim süresi ve yüksek standartlardaki beklentilerini sorunsuz bir şekilde karşılamak.',
 }
 
 const defaultVideo: VideoSection = {
@@ -151,18 +190,25 @@ const defaultVideo: VideoSection = {
 
 const defaultInfoCards: InfoCardsSection = {
   id: 'default',
-  pre_title: 'Rakamlarla Biz',
-  title: 'Başarı Hikayemiz',
-  description: 'Aklar İnşaat\'ın başarı hikayesi rakamlarla daha da anlamlı',
+  type: 'values',
+  pre_title: 'DEĞERLERİMİZ',
+  title: 'AKLAR İNŞAAT OLARAK BENİMSEDIĞIMIZ DEĞERLERIMIZ',
+  description: null,
   autoplay: true,
   autoplay_speed: 4000,
   show_arrows: true,
   show_dots: true,
   cards: [
-    { id: '1', icon: 'Building', title: 'Tamamlanan Proje', value: '50', suffix: '+', animation_type: 'countUp', target_number: 50 },
-    { id: '2', icon: 'Calendar', title: 'Yıllık Deneyim', value: '15', suffix: '+', animation_type: 'countUp', target_number: 15 },
-    { id: '3', icon: 'Users', title: 'Mutlu Müşteri', value: '1000', suffix: '+', animation_type: 'countUp', target_number: 1000 },
-    { id: '4', icon: 'Award', title: 'Memnuniyet Oranı', value: '98', suffix: '%', animation_type: 'countUp', target_number: 98 },
+    { id: '1', icon: 'Shield', title: 'Güvenilirlik', value: '', suffix: null, animation_type: 'static', target_number: null, description: 'Geleneksel ve itibarlı tüccar kimliğinden hiçbir zaman taviz vermemek, taahhütlerimizi zamanında ve eksiksiz olarak yerine getirmek.' },
+    { id: '2', icon: 'Award', title: 'Kalite', value: '', suffix: null, animation_type: 'static', target_number: null, description: 'Sağlamlıktan, kaliteden ve iş güvenliğinden ödün vermeden titizlik ile yeni estetik ve modern konutlar üretmek.' },
+    { id: '3', icon: 'Heart', title: 'Aile Olmak', value: '', suffix: null, animation_type: 'static', target_number: null, description: 'Bir aile şirketi çatısı altında, bütün çalışanlarımız ile karşılıklı güven ve saygıya dayalı, başarı hedefleyen bir ilişki içinde olmak.' },
+    { id: '4', icon: 'Lightbulb', title: 'Yenilikçi', value: '', suffix: null, animation_type: 'static', target_number: null, description: 'Sağlamlık ve estetikten uzaklaşmadan, en güncel malzemeleri, teknolojileri ve uygulamalarını takip etmek ve bunları inşaatlarımızda uygulamak.' },
+    { id: '5', icon: 'Smile', title: 'Memnuniyet', value: '', suffix: null, animation_type: 'static', target_number: null, description: 'Müşteri ve arsa sahiplerini hepsini memnun etmeyi amaçlamak; şeffaf, pratik ve çözüm odaklı çalışmak. 100% Müşteri Memnuniyeti Hedeflemek.' },
+    { id: '6', icon: 'Clock', title: 'Tecrübe', value: '', suffix: null, animation_type: 'static', target_number: null, description: 'Firmamızın köklü geçmişinden gelen güç ile yenilikçi, güvenilir ve dürüst anlayışını koruyarak çalışmalarını devam ettirmektedir.' },
+    { id: '7', icon: 'CheckCircle', title: 'Taahhüt', value: '', suffix: null, animation_type: 'static', target_number: null, description: 'Firmamız geçmişten günümüze kadarki tüm taahhütleri zamanından önce eksiksiz yerine getirmenin verdiği güvenle tanınmaktadır.' },
+    { id: '8', icon: 'HardHat', title: 'Güvenlik', value: '', suffix: null, animation_type: 'static', target_number: null, description: 'Firmamız çalışanlarının sağlığı ve güvenliği ile ilgili tehlikeleri en aza indirmek için yıllardır büyük çaba göstermektedir.' },
+    { id: '9', icon: 'Cpu', title: 'Teknoloji', value: '', suffix: null, animation_type: 'static', target_number: null, description: 'Gelişen dünyanın ve modern çağın gerektirdiği tüm yeni teknolojiler ve teknik gelişmeleri yaptığımız konutlarda uygulamaktayız.' },
+    { id: '10', icon: 'ScrollText', title: 'İlkelerimiz', value: '', suffix: null, animation_type: 'static', target_number: null, description: 'Firmamız, kalitenin oluşturulması, geliştirilmesi, uygulanması ve etkinliğinin sürekli iyileştirilmesi için gerekli olan faaliyetlerin yerine getirilmesi kararlığındadır.' },
   ],
 }
 

@@ -6,7 +6,13 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "bmad": "bmad-method",
+    "bmad:status": "bmad-method status",
+    "bmad:install": "bmad-method install",
+    "bmad:architect": "bmad-method run architect",
+    "bmad:dev": "bmad-method run developer",
+    "bmad:qa": "bmad-method run qa"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.992.0",
@@ -28,6 +34,7 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "bmad-method": "^6.0.1",
     "eslint": "^9",
     "eslint-config-next": "16.1.6",
     "tailwindcss": "^4",

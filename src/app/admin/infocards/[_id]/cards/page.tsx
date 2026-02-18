@@ -15,12 +15,20 @@ interface InfoCard {
   suffix: string
   animation_type: 'countUp' | 'static'
   target_number: number | null
+  description: string
   order_index: number
+}
+
+interface SectionInfo {
+  id: string
+  name: string
+  type: 'stats' | 'values'
 }
 
 const iconOptions = [
   'Building', 'Users', 'Award', 'TrendingUp', 'Home', 'Shield', 'CheckCircle',
-  'Star', 'Heart', 'Clock', 'Calendar', 'MapPin', 'Phone', 'Mail'
+  'Star', 'Heart', 'Clock', 'Calendar', 'MapPin', 'Phone', 'Mail',
+  'Lightbulb', 'Smile', 'HardHat', 'Cpu', 'ScrollText'
 ]
 
 export default function CardsManagerPage({ params }: { params: { _id: string } }) {
@@ -28,7 +36,7 @@ export default function CardsManagerPage({ params }: { params: { _id: string } }
   const supabase = createClient()
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
-  const [sectionName, setSectionName] = useState('')
+  const [section, setSection] = useState<SectionInfo | null>(null)
   const [cards, setCards] = useState<InfoCard[]>([])
 
   useEffect(() => {
@@ -36,25 +44,27 @@ export default function CardsManagerPage({ params }: { params: { _id: string } }
   }, [])
 
   const fetchData = async () => {
-    const [{ data: section }, { data: cardsData }] = await Promise.all([
-      supabase.from('info_cards_sections').select('name').eq('id', params._id).single(),
+    const [{ data: sectionData }, { data: cardsData }] = await Promise.all([
+      supabase.from('info_cards_sections').select('id, name, type').eq('id', params._id).single(),
       supabase.from('info_cards').select('*').eq('section_id', params._id).order('order_index', { ascending: true }),
     ])
     
-    if (section) setSectionName(section.name)
+    if (sectionData) setSection(sectionData as SectionInfo)
     setCards(cardsData || [])
     setLoading(false)
   }
 
   const addCard = () => {
+    const isStats = section?.type === 'stats'
     const newCard = {
       section_id: params._id,
-      icon: 'Building',
+      icon: 'Shield',
       title: '',
-      value: '',
-      suffix: '',
+      value: isStats ? '' : '',
+      suffix: isStats ? '' : '',
       animation_type: 'countUp' as const,
-      target_number: null,
+      target_number: null as number | null,
+      description: '',
       order_index: cards.length,
     }
     setCards([...cards, newCard])
@@ -81,10 +91,11 @@ export default function CardsManagerPage({ params }: { params: { _id: string } }
         section_id: params._id,
         icon: card.icon,
         title: card.title,
-        value: card.value,
+        value: card.value || null,
         suffix: card.suffix || null,
-        animation_type: card.animation_type,
+        animation_type: section?.type === 'stats' ? card.animation_type : 'static',
         target_number: card.target_number,
+        description: card.description,
         order_index: cards.indexOf(card),
       }
       
@@ -107,6 +118,8 @@ export default function CardsManagerPage({ params }: { params: { _id: string } }
     )
   }
 
+  const isStats = section?.type === 'stats'
+
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
@@ -116,7 +129,14 @@ export default function CardsManagerPage({ params }: { params: { _id: string } }
           </Link>
           <div>
             <h1 className="text-2xl font-bold text-gray-800">Kartları Düzenle</h1>
-            <p className="text-gray-500">{sectionName}</p>
+            <p className="text-gray-500">
+              {section?.name} 
+              <span className={`ml-2 px-2 py-0.5 rounded text-xs font-medium ${
+                isStats ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700'
+              }`}>
+                {isStats ? 'İstatistik' : 'Değer'}
+              </span>
+            </p>
           </div>
         </div>
         <div className="flex gap-3">
@@ -153,67 +173,95 @@ export default function CardsManagerPage({ params }: { params: { _id: string } }
                 <GripVertical className="w-5 h-5" />
               </div>
               
-              <div className="flex-1 grid md:grid-cols-6 gap-4">
-                <div>
-                  <label className="block text-xs font-medium text-gray-500 mb-1">İkon</label>
-                  <select
-                    value={card.icon}
-                    onChange={(e) => updateCard(index, 'icon', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm"
-                  >
-                    {iconOptions.map(icon => (
-                      <option key={icon} value={icon}>{icon}</option>
-                    ))}
-                  </select>
-                </div>
-                
-                <div className="md:col-span-2">
-                  <label className="block text-xs font-medium text-gray-500 mb-1">Başlık</label>
-                  <input
-                    type="text"
-                    value={card.title}
-                    onChange={(e) => updateCard(index, 'title', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm"
-                    placeholder="Tamamlanan Proje"
-                  />
-                </div>
-                
-                <div>
-                  <label className="block text-xs font-medium text-gray-500 mb-1">Değer</label>
-                  <input
-                    type="text"
-                    value={card.value}
-                    onChange={(e) => updateCard(index, 'value', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm"
-                    placeholder="50"
-                  />
-                </div>
-                
-                <div>
-                  <label className="block text-xs font-medium text-gray-500 mb-1">Sonek</label>
-                  <input
-                    type="text"
-                    value={card.suffix || ''}
-                    onChange={(e) => updateCard(index, 'suffix', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm"
-                    placeholder="+"
-                  />
-                </div>
-                
-                <div className="flex items-end gap-2">
-                  <div className="flex-1">
-                    <label className="block text-xs font-medium text-gray-500 mb-1">Animasyon</label>
+              {isStats ? (
+                // İstatistik Kartları Formu
+                <div className="flex-1 grid md:grid-cols-6 gap-4">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500 mb-1">İkon</label>
                     <select
-                      value={card.animation_type}
-                      onChange={(e) => updateCard(index, 'animation_type', e.target.value)}
+                      value={card.icon}
+                      onChange={(e) => updateCard(index, 'icon', e.target.value)}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm"
                     >
-                      <option value="countUp">Sayı Artışı</option>
-                      <option value="static">Sabit</option>
+                      {iconOptions.map(icon => (
+                        <option key={icon} value={icon}>{icon}</option>
+                      ))}
                     </select>
                   </div>
+                  
+                  <div className="md:col-span-2">
+                    <label className="block text-xs font-medium text-gray-500 mb-1">Başlık</label>
+                    <input
+                      type="text"
+                      value={card.title}
+                      onChange={(e) => updateCard(index, 'title', e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm"
+                      placeholder="Tamamlanan Proje"
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500 mb-1">Değer</label>
+                    <input
+                      type="text"
+                      value={card.value}
+                      onChange={(e) => updateCard(index, 'value', e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm"
+                      placeholder="50"
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500 mb-1">Sonek</label>
+                    <input
+                      type="text"
+                      value={card.suffix || ''}
+                      onChange={(e) => updateCard(index, 'suffix', e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm"
+                      placeholder="+"
+                    />
+                  </div>
+                  
+                  <div className="flex items-end gap-2">
+                    <div className="flex-1">
+                      <label className="block text-xs font-medium text-gray-500 mb-1">Animasyon</label>
+                      <select
+                        value={card.animation_type}
+                        onChange={(e) => updateCard(index, 'animation_type', e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm"
+                      >
+                        <option value="countUp">Sayı Artışı</option>
+                        <option value="static">Sabit</option>
+                      </select>
+                    </div>
+                  </div>
                 </div>
-              </div>
+              ) : (
+                // Değer Kartları Formu
+                <div className="flex-1 grid md:grid-cols-1 gap-4">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500 mb-1">Başlık</label>
+                    <input
+                      type="text"
+                      value={card.title}
+                      onChange={(e) => updateCard(index, 'title', e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm"
+                      placeholder="Güvenilirlik"
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500 mb-1">Açıklama</label>
+                    <textarea
+                      value={card.description}
+                      onChange={(e) => updateCard(index, 'description', e.target.value)}
+                      rows={3}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm resize-y"
+                      placeholder="Bu değerin açıklamasını girin..."
+                    />
+                  </div>
+                </div>
+              )}
               
               <button
                 onClick={() => removeCard(index, card.id)}
@@ -223,7 +271,7 @@ export default function CardsManagerPage({ params }: { params: { _id: string } }
               </button>
             </div>
             
-            {card.animation_type === 'countUp' && (
+            {isStats && card.animation_type === 'countUp' && (
               <div className="mt-3 ml-11">
                 <label className="block text-xs font-medium text-gray-500 mb-1">Hedef Sayı (CountUp için)</label>
                 <input

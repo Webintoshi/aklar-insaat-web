@@ -65,10 +65,10 @@ export function VideoSection({ data }: VideoSectionProps) {
             onClick={() => setIsOpen(true)}
             className="relative group mb-8"
           >
-            <span className="absolute inset-0 rounded-full bg-[#C9A962]/30 animate-ping" />
-            <span className="absolute inset-0 rounded-full bg-[#C9A962]/20 animate-pulse" />
+            <span className="absolute inset-0 rounded-full bg-[#CF000C]/30 animate-ping" />
+            <span className="absolute inset-0 rounded-full bg-[#CF000C]/20 animate-pulse" />
             
-            <div className="relative w-24 h-24 sm:w-32 sm:h-32 rounded-full bg-gradient-to-br from-[#C9A962] to-[#9A7E3C] flex items-center justify-center shadow-[0_10px_40px_-10px_rgba(201,169,98,0.4)] group-hover:shadow-[0_0_60px_rgba(201,169,98,0.5)] transition-shadow duration-500">
+            <div className="relative w-24 h-24 sm:w-32 sm:h-32 rounded-full bg-gradient-to-br from-[#CF000C] to-[#990000] flex items-center justify-center shadow-[0_10px_40px_-10px_rgba(207,0,12,0.4)] group-hover:shadow-[0_0_60px_rgba(207,0,12,0.5)] transition-shadow duration-500">
               <Play className="w-10 h-10 sm:w-12 sm:h-12 text-[#0F1D2F] ml-1" fill="currentColor" />
             </div>
           </motion.button>
@@ -78,7 +78,7 @@ export function VideoSection({ data }: VideoSectionProps) {
             animate={isInView ? { opacity: 1, y: 0 } : {}}
             transition={{ duration: 0.6, delay: 0.5 }}
           >
-            <p className="text-[#E8D5A3] text-sm uppercase tracking-[0.15em] mb-2 font-medium">
+            <p className="text-[#FF3333] text-sm uppercase tracking-[0.15em] mb-2 font-medium">
               {play_button_text}
             </p>
             {title && (

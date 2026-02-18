@@ -1,0 +1,30 @@
+{
+  "project": {
+    "name": "Aklar İnşaat",
+    "type": "nextjs",
+    "root": "./"
+  },
+  "bmad": {
+    "enabled": true,
+    "configPath": "./bmad.config.js"
+  },
+  "context": {
+    "include": [
+      "src/**/*",
+      "package.json",
+      "tsconfig.json",
+      "tailwind.config.ts"
+    ],
+    "exclude": [
+      "node_modules",
+      ".next",
+      "dist",
+      "_bmad-output"
+    ]
+  },
+  "preferences": {
+    "language": "tr",
+    "codeStyle": "strict-typescript",
+    "framework": "nextjs-app-router"
+  }
+}

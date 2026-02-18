@@ -7,9 +7,9 @@
   --color-primary-dark: #0F1D2F;
 
   /* Secondary Colors - Gold/Beige */
-  --color-secondary: #C9A962;
-  --color-secondary-light: #E8D5A3;
-  --color-secondary-dark: #9A7E3C;
+  --color-secondary: #CF000C;
+  --color-secondary-light: #FF3333;
+  --color-secondary-dark: #990000;
 
   /* Neutral Palette */
   --color-white: #FFFFFF;
@@ -62,7 +62,7 @@
   --color-gray-800: var(--color-gray-800);
 
   /* Shadows */
-  --shadow-gold: 0 10px 40px -10px rgba(201, 169, 98, 0.4);
+  --shadow-red: 0 10px 40px -10px rgba(207, 0, 12, 0.4);
 }
 
 /* Base Styles */

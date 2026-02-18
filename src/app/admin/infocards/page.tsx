@@ -3,12 +3,13 @@
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
-import { ArrowLeft, Edit, Plus, Eye, EyeOff, Loader2 } from 'lucide-react'
+import { ArrowLeft, Edit, Plus, Eye, EyeOff, Loader2, BarChart3, Heart } from 'lucide-react'
 
 interface InfoCardsSection {
   id: string
   name: string
   is_active: boolean
+  type: 'stats' | 'values'
   title: string
   description: string
 }
@@ -47,7 +48,7 @@ export default function InfoCardsPage() {
           <Link href="/admin" className="mr-4 p-2 hover:bg-gray-100 rounded-lg transition-colors">
             <ArrowLeft className="w-5 h-5" />
           </Link>
-          <h1 className="text-2xl font-bold text-gray-800">İstatistikler Yönetimi</h1>
+          <h1 className="text-2xl font-bold text-gray-800">Kartlar Yönetimi</h1>
         </div>
         <Link
           href="/admin/infocards/new"
@@ -79,6 +80,18 @@ export default function InfoCardsPage() {
                       Pasif
                     </span>
                   )}
+                  {/* Tip Badge */}
+                  {section.type === 'stats' ? (
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                      <BarChart3 className="w-3 h-3 mr-1" />
+                      İstatistik
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+                      <Heart className="w-3 h-3 mr-1" />
+                      Değer
+                    </span>
+                  )}
                 </div>
                 <h3 className="text-lg text-gray-700">{section.title}</h3>
                 {section.description && <p className="text-gray-500 text-sm">{section.description}</p>}
@@ -104,7 +117,7 @@ export default function InfoCardsPage() {
         
         {sections.length === 0 && (
           <div className="text-center py-12 bg-white rounded-xl">
-            <p className="text-gray-500">Henüz istatistik bölümü eklenmemiş.</p>
+            <p className="text-gray-500">Henüz kart bölümü eklenmemiş.</p>
             <Link href="/admin/infocards/new" className="inline-flex items-center mt-4 text-blue-600 hover:text-blue-700 font-medium">
               <Plus className="w-4 h-4 mr-1" />
               İlk Bölümü Ekle

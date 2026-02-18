@@ -51,21 +51,11 @@ export function Header({ phone = '0545 727 72 97' }: HeaderProps) {
           <div className="flex items-center justify-between h-20">
             {/* Logo */}
             <Link href="/" className="flex items-center gap-2">
-              <div className="w-10 h-10 bg-black rounded-full flex items-center justify-center">
-                <span className="text-white font-bold text-lg">K</span>
-              </div>
-              <div className="flex flex-col">
-                <span className={`text-xl font-bold leading-tight transition-colors ${
-                  isScrolled ? 'text-red-600' : 'text-red-600'
-                }`}>
-                  AKLAR
-                </span>
-                <span className={`text-[10px] tracking-[0.3em] font-semibold -mt-1 transition-colors ${
-                  isScrolled ? 'text-gray-800' : 'text-gray-800'
-                }`}>
-                  İNŞAAT
-                </span>
-              </div>
+              <img 
+                src="/logoypng_48.png" 
+                alt="Aklar İnşaat" 
+                className="h-10 w-auto object-contain"
+              />
             </Link>
 
             {/* Desktop Navigation */}

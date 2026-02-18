@@ -45,12 +45,12 @@ export function ProjectsSection({ projects }: ProjectsSectionProps) {
             animate={isInView ? { opacity: 1, y: 0 } : {}}
             transition={{ duration: 0.6 }}
           >
-            <p className="text-[#C9A962] text-sm uppercase tracking-[0.15em] mb-4 font-medium">
+            <p className="text-[#CF000C] text-sm uppercase tracking-[0.15em] mb-4 font-medium">
               Projelerimiz
             </p>
             <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-gray-900">
               Tamamlanan ve{' '}
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#C9A962] to-[#9A7E3C]">
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#CF000C] to-[#990000]">
                 Devam Eden
               </span>
               {' '}Projeler
@@ -64,7 +64,7 @@ export function ProjectsSection({ projects }: ProjectsSectionProps) {
           >
             <Link
               href="/projeler"
-              className="inline-flex items-center text-[#1E3A5F] font-semibold hover:text-[#C9A962] transition-colors group"
+              className="inline-flex items-center text-[#1E3A5F] font-semibold hover:text-[#CF000C] transition-colors group"
             >
               Tüm Projeler
               <ArrowRight className="w-5 h-5 ml-2 transform group-hover:translate-x-1 transition-transform" />

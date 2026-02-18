@@ -1,0 +1,40 @@
+{
+  "name": "Aklar İnşaat BMAD Configuration",
+  "version": "6.0.1",
+  "module": "bmm",
+  "tools": ["claude-code"],
+  "installedAt": "2026-02-18",
+  "project": {
+    "type": "nextjs",
+    "language": "typescript",
+    "framework": "next.js",
+    "styling": "tailwindcss",
+    "database": "supabase"
+  },
+  "agents": [
+    {
+      "id": "architect",
+      "name": "BMAD Architect",
+      "version": "1.0.0",
+      "enabled": true
+    },
+    {
+      "id": "developer", 
+      "name": "BMAD Developer",
+      "version": "1.0.0",
+      "enabled": true
+    },
+    {
+      "id": "qa",
+      "name": "BMAD QA",
+      "version": "1.0.0", 
+      "enabled": true
+    }
+  ],
+  "workflows": [
+    "agile-ai",
+    "feature-development",
+    "bug-fix",
+    "refactoring"
+  ]
+}

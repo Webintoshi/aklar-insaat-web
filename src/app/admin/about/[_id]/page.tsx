@@ -16,23 +16,10 @@ interface AboutSection {
     years: number
     text: string
   }
-  pre_title: string
-  title: string
-  highlight_word: string
-  description: string
-  features: {
-    icon: string
-    title: string
-    description: string
-  }[]
-  cta_text: string
-  cta_link: string
+  subtitle: string
+  paragraphs: string[]
+  highlight_text: string
 }
-
-const iconOptions = [
-  'Shield', 'Award', 'Clock', 'Heart', 'Home', 'Building', 'Users', 'Star',
-  'CheckCircle', 'TrendingUp', 'MapPin', 'Phone', 'Mail', 'Calendar'
-]
 
 export default function AboutEditorPage({ params }: { params: { _id: string } }) {
   const router = useRouter()
@@ -45,15 +32,14 @@ export default function AboutEditorPage({ params }: { params: { _id: string } })
     name: 'Hakkımızda',
     is_active: true,
     image_url: '',
-    image_caption: '',
+    image_caption: 'Modern Yaşam Projesi',
     experience_badge: { years: 15, text: 'Yıllık Tecrübe' },
-    pre_title: 'Bizi Tanıyın',
-    title: 'Aklar İnşaat',
-    highlight_word: '',
-    description: '',
-    features: [],
-    cta_text: 'Daha Fazla Bilgi',
-    cta_link: '/kurumsal',
+    subtitle: 'AKLAR İNŞAAT',
+    paragraphs: [
+      `Aklar İnşaat, uzun yıllardır Ordu'da hizmet vermektedir. 'Hız ve Kalite Bizim İşimiz' sloganıyla sektöre adım atan firmamız, her geçen gün kendini yenileyerek büyümeye devam etmektedir. Son yıllarda artan iş talebi ve büyümekte olan inşaat sektörü konusunda yaptığımız çalışmalar, şirketin bilgi birikimi ve sahip olduğu uzman kadrosunu, inşaat, proje alanında çalışmaya yöneltmiştir. Aklar İnşaat, kurumsal ve bireysel müşterilerden gelen talepler doğrultusunda standartlara uygun, bilimsel ve güvenilir mühendislik, inşaat işleri hazırlayan bir şirkettir.`,
+      'Sunduğumuz kaliteli, etkin hizmetlerimizle bugün; bölgemizde faaliyet gösteren seçkin ve tercih edilen hizmet kuruluşlarından biri olmanın haklı gururunu yaşamaktayız.'
+    ],
+    highlight_text: 'Hem ulaştığımız kitle hemde takım arkadaşlarımız arasında sinerji yaratabilmek için benimsediğimiz değerler; Müşterilerimizin kalite, fiyat, teslim süresi ve yüksek standartlardaki beklentilerini sorunsuz bir şekilde karşılamak.',
   })
 
   useEffect(() => {
@@ -73,8 +59,10 @@ export default function AboutEditorPage({ params }: { params: { _id: string } })
     if (about) {
       setData({
         ...about,
-        features: about.features || [],
         experience_badge: about.experience_badge || { years: 15, text: 'Yıllık Tecrübe' },
+        paragraphs: about.paragraphs || [],
+        subtitle: about.subtitle || 'AKLAR İNŞAAT',
+        highlight_text: about.highlight_text || '',
       })
     }
     setLoading(false)
@@ -86,7 +74,7 @@ export default function AboutEditorPage({ params }: { params: { _id: string } })
 
     const payload = {
       ...data,
-      features: data.features?.filter(f => f.title) || [],
+      paragraphs: data.paragraphs?.filter(p => p.trim()) || [],
     }
 
     if (isNew) {
@@ -100,24 +88,24 @@ export default function AboutEditorPage({ params }: { params: { _id: string } })
     setSaving(false)
   }
 
-  const addFeature = () => {
+  const addParagraph = () => {
     setData({
       ...data,
-      features: [...(data.features || []), { icon: 'Shield', title: '', description: '' }],
+      paragraphs: [...(data.paragraphs || []), ''],
     })
   }
 
-  const removeFeature = (index: number) => {
+  const removeParagraph = (index: number) => {
     setData({
       ...data,
-      features: data.features?.filter((_, i) => i !== index) || [],
+      paragraphs: data.paragraphs?.filter((_, i) => i !== index) || [],
     })
   }
 
-  const updateFeature = (index: number, field: 'icon' | 'title' | 'description', value: string) => {
-    const newFeatures = [...(data.features || [])]
-    newFeatures[index] = { ...newFeatures[index], [field]: value }
-    setData({ ...data, features: newFeatures })
+  const updateParagraph = (index: number, value: string) => {
+    const newParagraphs = [...(data.paragraphs || [])]
+    newParagraphs[index] = value
+    setData({ ...data, paragraphs: newParagraphs })
   }
 
   if (loading) {
@@ -235,124 +223,72 @@ export default function AboutEditorPage({ params }: { params: { _id: string } })
           <h2 className="text-lg font-semibold text-gray-800 mb-4">İçerik</h2>
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Pre-title</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Üst Başlık (Subtitle)</label>
               <input
                 type="text"
-                value={data.pre_title}
-                onChange={(e) => setData({ ...data, pre_title: e.target.value })}
+                value={data.subtitle}
+                onChange={(e) => setData({ ...data, subtitle: e.target.value })}
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-                placeholder="Bizi Tanıyın"
+                placeholder="AKLAR İNŞAAT"
               />
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Başlık</label>
-              <input
-                type="text"
-                value={data.title}
-                onChange={(e) => setData({ ...data, title: e.target.value })}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-                placeholder="Aklar İnşaat"
-                required
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Vurgulanacak Kelime</label>
-              <input
-                type="text"
-                value={data.highlight_word}
-                onChange={(e) => setData({ ...data, highlight_word: e.target.value })}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-                placeholder="Güven"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Açıklama</label>
-              <textarea
-                value={data.description}
-                onChange={(e) => setData({ ...data, description: e.target.value })}
-                rows={5}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none resize-y"
-                placeholder="Açıklama metni..."
-                required
-              />
-            </div>
-          </div>
-        </div>
 
-        {/* Özellikler */}
-        <div className="bg-white rounded-xl shadow-sm p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-gray-800">Özellikler</h2>
-            <button
-              type="button"
-              onClick={addFeature}
-              className="flex items-center px-3 py-1.5 text-sm font-medium text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-            >
-              <Plus className="w-4 h-4 mr-1" />
-              Ekle
-            </button>
-          </div>
-          <div className="space-y-4">
-            {data.features?.map((feature, index) => (
-              <div key={index} className="p-4 border border-gray-200 rounded-lg space-y-3">
-                <div className="flex items-center gap-3">
-                  <select
-                    value={feature.icon}
-                    onChange={(e) => updateFeature(index, 'icon', e.target.value)}
-                    className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-                  >
-                    {iconOptions.map(icon => (
-                      <option key={icon} value={icon}>{icon}</option>
-                    ))}
-                  </select>
-                  <input
-                    type="text"
-                    value={feature.title}
-                    onChange={(e) => updateFeature(index, 'title', e.target.value)}
-                    className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-                    placeholder="Başlık"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => removeFeature(index)}
-                    className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                  >
-                    <Trash2 className="w-5 h-5" />
-                  </button>
-                </div>
-                <input
-                  type="text"
-                  value={feature.description}
-                  onChange={(e) => updateFeature(index, 'description', e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-                  placeholder="Açıklama"
-                />
+            {/* Paragraflar */}
+            <div>
+              <div className="flex items-center justify-between mb-3">
+                <label className="block text-sm font-medium text-gray-700">Paragraflar</label>
+                <button
+                  type="button"
+                  onClick={addParagraph}
+                  className="flex items-center px-3 py-1.5 text-sm font-medium text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                >
+                  <Plus className="w-4 h-4 mr-1" />
+                  Paragraf Ekle
+                </button>
               </div>
-            ))}
-            {data.features?.length === 0 && (
-              <p className="text-gray-500 text-center py-4">Henüz özellik eklenmemiş</p>
-            )}
-          </div>
-        </div>
+              <div className="space-y-3">
+                {data.paragraphs?.map((paragraph, index) => (
+                  <div key={index} className="flex gap-3">
+                    <textarea
+                      value={paragraph}
+                      onChange={(e) => updateParagraph(index, e.target.value)}
+                      rows={4}
+                      className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none resize-y"
+                      placeholder={`Paragraf ${index + 1}`}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => removeParagraph(index)}
+                      className="p-3 text-red-600 hover:bg-red-50 rounded-lg transition-colors self-start"
+                    >
+                      <Trash2 className="w-5 h-5" />
+                    </button>
+                  </div>
+                ))}
+                {data.paragraphs?.length === 0 && (
+                  <p className="text-gray-500 text-center py-4 border border-dashed border-gray-300 rounded-lg">
+                    Henüz paragraf eklenmemiş
+                  </p>
+                )}
+              </div>
+            </div>
 
-        {/* CTA */}
-        <div className="bg-white rounded-xl shadow-sm p-6">
-          <h2 className="text-lg font-semibold text-gray-800 mb-4">CTA Butonu</h2>
-          <div className="grid md:grid-cols-2 gap-4">
-            <input
-              type="text"
-              value={data.cta_text}
-              onChange={(e) => setData({ ...data, cta_text: e.target.value })}
-              className="px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-              placeholder="Buton metni"
-            />
-            <input
-              type="text"
-              value={data.cta_link}
-              onChange={(e) => setData({ ...data, cta_link: e.target.value })}
-              className="px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-              placeholder="Link"
-            />
+            {/* Highlight Box */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Vurgu Kutusu Metni (Kırmızı Kutu)
+              </label>
+              <textarea
+                value={data.highlight_text}
+                onChange={(e) => setData({ ...data, highlight_text: e.target.value })}
+                rows={4}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none resize-y"
+                placeholder="Kırmızı kutuda görünecek metin..."
+              />
+              <p className="mt-1 text-xs text-gray-500">
+                Bu metin kırmızı arka planlı kutu içinde görüntülenecektir.
+              </p>
+            </div>
           </div>
         </div>
 

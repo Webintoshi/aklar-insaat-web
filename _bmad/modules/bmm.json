@@ -1,0 +1,56 @@
+{
+  "module": "bmm",
+  "name": "BMad Method Module",
+  "version": "6.0.1",
+  "enabled": true,
+  "config": {
+    "codeGeneration": {
+      "enabled": true,
+      "templates": {
+        "component": "nextjs-component",
+        "page": "nextjs-page",
+        "api": "nextjs-api",
+        "hook": "react-hook"
+      }
+    },
+    "codeReview": {
+      "enabled": true,
+      "rules": [
+        "typescript-strict",
+        "no-console-log",
+        "proper-error-handling",
+        "accessibility-check"
+      ]
+    },
+    "documentation": {
+      "enabled": true,
+      "autoGenerate": true,
+      "format": "markdown"
+    },
+    "testing": {
+      "enabled": true,
+      "coverage": 80,
+      "types": ["unit", "integration"]
+    }
+  },
+  "projectSpecific": {
+    "stack": {
+      "frontend": ["nextjs", "react", "typescript", "tailwind"],
+      "backend": ["nextjs-api", "supabase"],
+      "database": "supabase-postgres",
+      "storage": "cloudflare-r2"
+    },
+    "conventions": {
+      "naming": {
+        "components": "PascalCase",
+        "functions": "camelCase",
+        "constants": "SCREAMING_SNAKE_CASE",
+        "files": "kebab-case"
+      },
+      "structure": {
+        "groupByFeature": true,
+        "coLocateTests": true
+      }
+    }
+  }
+}
