@@ -5,11 +5,18 @@ import { createClient } from "@/lib/supabase/server";
 export async function GET() {
   try {
     const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    
+    if (authError) {
+      console.error("Auth error in GET:", authError);
+      return NextResponse.json({ error: "Authentication error: " + authError.message }, { status: 401 });
+    }
     
     if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return NextResponse.json({ error: "Unauthorized - No user found" }, { status: 401 });
     }
+
+    console.log("GET /api/projects - User:", user.id);
 
     const { data, error } = await supabase
       .from("projects")
@@ -19,14 +26,18 @@ export async function GET() {
 
     if (error) {
       console.error("Projects fetch error:", error);
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      return NextResponse.json({ 
+        error: "Database error: " + error.message,
+        code: error.code,
+        details: error.details 
+      }, { status: 500 });
     }
 
-    return NextResponse.json(data);
-  } catch (error) {
+    return NextResponse.json(data || []);
+  } catch (error: any) {
     console.error("Projects GET error:", error);
     return NextResponse.json(
-      { error: "Internal server error" },
+      { error: "Internal server error: " + (error.message || "Unknown error") },
       { status: 500 }
     );
   }
@@ -40,35 +51,55 @@ export async function POST(req: NextRequest) {
     
     if (userError) {
       console.error("Auth error:", userError);
-      return NextResponse.json({ error: "Auth error: " + userError.message }, { status: 401 });
+      return NextResponse.json({ 
+        error: "Auth error: " + userError.message,
+        code: userError.code 
+      }, { status: 401 });
     }
     
     if (!user) {
-      return NextResponse.json({ error: "Unauthorized - No user" }, { status: 401 });
+      return NextResponse.json({ error: "Unauthorized - No user found. Please login again." }, { status: 401 });
     }
 
-    const body = await req.json();
+    let body;
+    try {
+      body = await req.json();
+    } catch (e) {
+      return NextResponse.json({ error: "Invalid JSON in request body" }, { status: 400 });
+    }
+    
     console.log("Creating project with body:", body);
     console.log("User ID:", user.id);
     
-    // Slug oluştur
-    const slug = body.slug || generateSlug(body.name);
+    // Validasyon
+    if (!body.name || body.name.trim() === '') {
+      return NextResponse.json({ error: "Proje adı zorunludur" }, { status: 400 });
+    }
     
-    // Temiz veri hazırla
-    const insertData = {
-      name: body.name,
-      slug: slug,
+    // Slug oluştur
+    const slug = body.slug?.trim() || generateSlug(body.name);
+    
+    if (!slug || slug.trim() === '') {
+      return NextResponse.json({ error: "Slug oluşturulamadı" }, { status: 400 });
+    }
+    
+    // Temiz veri hazırla - sadece tabloda var olan kolonlar
+    const insertData: any = {
+      name: body.name.trim(),
+      slug: slug.toLowerCase(),
       status: body.status || 'draft',
       is_featured: body.is_featured || false,
-      about_text: body.about_text || null,
-      cta_text: body.cta_text || 'Devamı',
-      apartment_options: body.apartment_options || null,
-      neighborhood: body.neighborhood || null,
-      location_description: body.location_description || null,
-      meta_title: body.meta_title || null,
-      meta_desc: body.meta_desc || null,
       created_by: user.id,
     };
+    
+    // Opsiyonel alanlar - sadece değer varsa ekle
+    if (body.about_text?.trim()) insertData.about_text = body.about_text.trim();
+    if (body.cta_text?.trim()) insertData.cta_text = body.cta_text.trim();
+    if (body.apartment_options?.trim()) insertData.apartment_options = body.apartment_options.trim();
+    if (body.neighborhood?.trim()) insertData.neighborhood = body.neighborhood.trim();
+    if (body.location_description?.trim()) insertData.location_description = body.location_description.trim();
+    if (body.meta_title?.trim()) insertData.meta_title = body.meta_title.trim();
+    if (body.meta_desc?.trim()) insertData.meta_desc = body.meta_desc.trim();
     
     console.log("Insert data:", insertData);
 
@@ -80,8 +111,21 @@ export async function POST(req: NextRequest) {
 
     if (error) {
       console.error("Project insert error:", error);
+      
+      // Daha anlamlı hata mesajları
+      let errorMessage = error.message;
+      if (error.code === '23505') {
+        errorMessage = "Bu slug ile bir proje zaten mevcut. Lütfen farklı bir proje adı deneyin.";
+      } else if (error.code === '23503') {
+        errorMessage = "Foreign key hatası: Geçersiz kullanıcı veya ilişkili kayıt.";
+      } else if (error.code === '23502') {
+        errorMessage = "Zorunlu alan eksik: " + error.details;
+      } else if (error.code === '42501') {
+        errorMessage = "Yetki hatası: RLS politikası bu işlemi engelliyor.";
+      }
+      
       return NextResponse.json({ 
-        error: error.message, 
+        error: errorMessage, 
         code: error.code,
         details: error.details,
         hint: error.hint
