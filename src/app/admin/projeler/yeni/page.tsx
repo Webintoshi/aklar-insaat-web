@@ -74,9 +74,9 @@ export default function YeniProjePage() {
       
       const data = await res.json()
       router.push(`/admin/projeler/${data.id}`)
-    } catch (error) {
+    } catch (error: any) {
       console.error('Create error:', error)
-      alert('Proje oluşturulurken bir hata oluştu')
+      alert('Proje oluşturulurken bir hata oluştu: ' + (error.message || 'Bilinmeyen hata'))
       setSaving(false)
     }
   }
