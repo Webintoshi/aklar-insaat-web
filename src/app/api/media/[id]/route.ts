@@ -4,7 +4,7 @@ import { deleteFromR2 } from "@/lib/r2/delete";
 
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const supabase = await createClient();
@@ -14,11 +14,13 @@ export async function DELETE(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const { id } = await params;
+
     // DB'den r2_key'i al
     const { data: media } = await supabase
       .from("project_media")
       .select("r2_key")
-      .eq("id", params.id)
+      .eq("id", id)
       .single();
 
     if (!media) {
@@ -29,7 +31,7 @@ export async function DELETE(
     await deleteFromR2(media.r2_key);
 
     // DB'den sil
-    await supabase.from("project_media").delete().eq("id", params.id);
+    await supabase.from("project_media").delete().eq("id", id);
 
     return NextResponse.json({ success: true });
   } catch (error) {
