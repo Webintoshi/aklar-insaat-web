@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import { Playfair_Display, Inter } from 'next/font/google'
 import '../globals.css'
 import { Header } from './_components/Header'
+import { WhatsAppWidget } from './_components/WhatsAppWidget'
 import { Footer } from './_sections/Footer'
 import { getFooterSettings } from '@/lib/api/frontend-data'
 
@@ -43,7 +44,7 @@ export default async function SiteLayout({
           {children}
         </div>
         <Footer data={footerData} />
-        <script src="/whatsapp-widget.js" async defer></script>
+        <WhatsAppWidget />
       </body>
     </html>
   )
