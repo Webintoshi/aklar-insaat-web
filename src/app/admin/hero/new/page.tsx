@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { ArrowLeft, Loader2, Save, Plus, Trash2, Upload, Image as ImageIcon, Monitor, Smartphone } from 'lucide-react'
+import { ArrowLeft, Loader2, Save, Plus, Trash2, Upload, Image as ImageIcon, Monitor, Smartphone, AlertCircle } from 'lucide-react'
 import Image from 'next/image'
 
 interface HeroBanner {
@@ -22,6 +22,7 @@ export default function HeroNewPage() {
   const router = useRouter()
   const supabase = createClient()
   const [loading, setLoading] = useState(false)
+  const [uploadError, setUploadError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
   const [banners, setBanners] = useState<HeroBanner[]>([
     {
@@ -41,6 +42,7 @@ export default function HeroNewPage() {
     if (!file) return
 
     setLoading(true)
+    setUploadError(null)
 
     try {
       const formData = new FormData()
@@ -53,7 +55,12 @@ export default function HeroNewPage() {
 
       const result = await response.json()
 
+      if (!response.ok) {
+        throw new Error(result.error || 'Yükleme başarısız')
+      }
+
       if (result.url) {
+        console.log('Uploaded image URL:', result.url)
         const newBanners = [...banners]
         if (type === 'desktop') {
           newBanners[bannerIndex].desktop_image = result.url
@@ -62,8 +69,9 @@ export default function HeroNewPage() {
         }
         setBanners(newBanners)
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Upload error:', error)
+      setUploadError(error.message || 'Görsel yüklenirken bir hata oluştu')
     } finally {
       setLoading(false)
     }
@@ -121,6 +129,19 @@ export default function HeroNewPage() {
     }
   }
 
+  // Görsel yükleme hatası handler
+  const handleImageError = (e: React.SyntheticEvent<HTMLImageElement>, bannerIndex: number, type: 'desktop' | 'mobile') => {
+    console.error('Image failed to load:', e.currentTarget.src)
+    const newBanners = [...banners]
+    if (type === 'desktop') {
+      newBanners[bannerIndex].desktop_image = ''
+    } else {
+      newBanners[bannerIndex].mobile_image = ''
+    }
+    setBanners(newBanners)
+    setUploadError('Görsel yüklenemedi. URL: ' + e.currentTarget.src)
+  }
+
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
@@ -151,6 +172,13 @@ export default function HeroNewPage() {
           )}
         </button>
       </div>
+
+      {uploadError && (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6 flex items-center">
+          <AlertCircle className="w-5 h-5 text-red-600 mr-2 flex-shrink-0" />
+          <span className="text-red-700">{uploadError}</span>
+        </div>
+      )}
 
       <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
         <div className="flex items-center justify-between mb-4">
@@ -195,7 +223,11 @@ export default function HeroNewPage() {
                           src={banner.desktop_image}
                           alt="Desktop"
                           className="w-full h-48 object-cover rounded-lg mx-auto"
+                          onError={(e) => handleImageError(e, index, 'desktop')}
                         />
+                        <div className="mt-2 text-xs text-gray-500 truncate">
+                          URL: {banner.desktop_image}
+                        </div>
                         <button
                           onClick={() => {
                             const newBanners = [...banners]
@@ -235,7 +267,11 @@ export default function HeroNewPage() {
                           src={banner.mobile_image}
                           alt="Mobile"
                           className="w-full h-48 object-cover rounded-lg mx-auto"
+                          onError={(e) => handleImageError(e, index, 'mobile')}
                         />
+                        <div className="mt-2 text-xs text-gray-500 truncate">
+                          URL: {banner.mobile_image}
+                        </div>
                         <button
                           onClick={() => {
                             const newBanners = [...banners]
