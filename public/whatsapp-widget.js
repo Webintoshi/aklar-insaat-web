@@ -485,12 +485,13 @@
     const cached = getFromLocalStorage();
     if (cached) {
       config = cached;
+      console.log('[WA Widget] Config loaded from cache:', config);
       return;
     }
 
     try {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 3000);
+      const timeoutId = setTimeout(() => controller.abort(), 5000);
 
       const res = await fetch(CONFIG_URL, { 
         signal: controller.signal 
@@ -498,35 +499,84 @@
       
       clearTimeout(timeoutId);
       
-      if (!res.ok) throw new Error(`Config fetch failed: ${res.status}`);
+      if (!res.ok) {
+        console.error('[WA Widget] Config fetch failed:', res.status);
+        throw new Error(`Config fetch failed: ${res.status}`);
+      }
 
       config = await res.json();
+      console.log('[WA Widget] Config fetched:', config);
       saveToLocalStorage(config);
     } catch (err) {
-      console.warn('[WA Widget] Config fetch failed:', err.message);
-      // Hata durumunda widget gösterme
-      config = null;
+      console.error('[WA Widget] Config fetch error:', err.message);
+      // Hata durumunda varsayılan config kullan
+      config = {
+        enabled: true,
+        phone_number: '+905457277297',
+        position: 'bottom-right',
+        button_color: '#25D366',
+        button_size: 60,
+        show_tooltip: true,
+        tooltip_text: 'Bize WhatsApp\'tan yazın!',
+        pulse_animation: true,
+        show_delay_ms: 2000,
+        show_on_mobile: true,
+        show_on_desktop: true,
+        hidden_url_patterns: ['/admin'],
+        default_message: 'Merhaba, web sitenizden ulaşıyorum.'
+      };
+      console.log('[WA Widget] Using default config');
     }
   }
 
   async function init() {
+    console.log('[WA Widget] Initializing...');
     await fetchConfig();
     
-    if (!config || !config.enabled) return;
+    if (!config) {
+      console.log('[WA Widget] No config available');
+      return;
+    }
+    
+    console.log('[WA Widget] Config enabled:', config.enabled);
+    
+    if (config.enabled === false) {
+      console.log('[WA Widget] Widget is disabled');
+      return;
+    }
 
     // Cihaz kontrolü
     const deviceType = getDeviceType();
-    if (deviceType === 'mobile' && !config.show_on_mobile) return;
-    if (deviceType === 'desktop' && !config.show_on_desktop) return;
+    console.log('[WA Widget] Device type:', deviceType);
+    
+    if (deviceType === 'mobile' && config.show_on_mobile === false) {
+      console.log('[WA Widget] Hidden on mobile');
+      return;
+    }
+    if (deviceType === 'desktop' && config.show_on_desktop === false) {
+      console.log('[WA Widget] Hidden on desktop');
+      return;
+    }
 
     // URL kontrolü
-    if (shouldHide(config.hidden_url_patterns)) return;
+    const currentPath = window.location.pathname;
+    const shouldHideWidget = shouldHide(config.hidden_url_patterns);
+    console.log('[WA Widget] Current path:', currentPath, 'Should hide:', shouldHideWidget);
+    
+    if (shouldHideWidget) {
+      console.log('[WA Widget] Hidden by URL pattern');
+      return;
+    }
 
     // Widget oluştur (gizli)
+    console.log('[WA Widget] Creating widget...');
     createWidget();
 
     // Gecikmeli göster
-    setTimeout(showWidget, config.show_delay_ms);
+    setTimeout(() => {
+      console.log('[WA Widget] Showing widget');
+      showWidget();
+    }, config.show_delay_ms || 2000);
   }
 
   // Başlat
