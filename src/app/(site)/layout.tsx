@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
 import { Playfair_Display, Inter } from 'next/font/google'
-import './globals.css'
+import '../globals.css'
 
 const playfair = Playfair_Display({
   subsets: ['latin'],
@@ -25,14 +25,14 @@ export const metadata: Metadata = {
   },
 }
 
-export default function RootLayout({
+export default function SiteLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
   return (
     <html lang="tr" className={`${playfair.variable} ${inter.variable} scroll-smooth`}>
-      <body className="font-sans antialiased bg-[#FAFAF8] text-gray-800">
+      <body className="font-sans antialiased bg-off-white text-gray-800">
         {children}
       </body>
     </html>
