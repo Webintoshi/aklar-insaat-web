@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { Building2, Loader2 } from 'lucide-react'
 
@@ -9,30 +9,11 @@ export default function LoginPage() {
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
-  const [success, setSuccess] = useState(false)
-  const checkedRef = useRef(false)
-
-  // Sadece bir kere çalışsın - infinite loop'u engelle
-  useEffect(() => {
-    if (checkedRef.current) return
-    checkedRef.current = true
-
-    const checkSession = async () => {
-      const supabase = createClient()
-      const { data: { session } } = await supabase.auth.getSession()
-      if (session) {
-        window.location.replace('/admin/pages')
-      }
-    }
-    checkSession()
-  }, []) // Boş dependency array - sadece mount'ta çalışır
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    
     setLoading(true)
     setError('')
-    setSuccess(false)
 
     try {
       const supabase = createClient()
@@ -47,18 +28,13 @@ export default function LoginPage() {
         return
       }
 
-      setSuccess(true)
-      
-      // Hard redirect - replace kullanarak history'de geri dönülmesini engelle
-      setTimeout(() => {
-        window.location.replace('/admin/pages')
-      }, 800)
+      // Başarılı - hard redirect
+      window.location.href = '/admin'
       
     } catch (err) {
       setError('Beklenmeyen bir hata oluştu.')
+      setLoading(false)
     }
-    
-    setLoading(false)
   }
 
   return (
@@ -79,12 +55,6 @@ export default function LoginPage() {
                 {error}
               </div>
             )}
-            
-            {success && (
-              <div className="p-4 bg-green-50 border border-green-200 rounded-lg text-green-600 text-sm">
-                Giriş başarılı! Yönlendiriliyorsunuz...
-              </div>
-            )}
 
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
@@ -95,7 +65,7 @@ export default function LoginPage() {
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full px-4 py-3 border border-gray-400 bg-white text-gray-900 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors placeholder-gray-500"
+                className="w-full px-4 py-3 border border-gray-400 bg-white text-gray-900 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors"
                 placeholder="admin@example.com"
                 required
                 disabled={loading}
@@ -121,7 +91,7 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full flex items-center justify-center py-3 px-4 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full flex items-center justify-center py-3 px-4 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors disabled:opacity-50"
             >
               {loading ? (
                 <>
