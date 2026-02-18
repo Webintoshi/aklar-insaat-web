@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Building2, Loader2 } from 'lucide-react'
@@ -13,6 +13,17 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState(false)
+
+  // Session kontrolü - zaten giriş yapmışsa admin'e yönlendir
+  useEffect(() => {
+    const checkSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (session) {
+        window.location.href = '/admin/pages'
+      }
+    }
+    checkSession()
+  }, [supabase])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -38,9 +49,9 @@ export default function LoginPage() {
       console.log('Login success:', data.user)
       setSuccess(true)
       
+      // Hard redirect ile çöz - Next.js router yerine
       setTimeout(() => {
-        router.push('/admin')
-        router.refresh()
+        window.location.href = '/admin/pages'
       }, 500)
       
     } catch (err) {
@@ -86,7 +97,7 @@ export default function LoginPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="w-full px-4 py-3 border border-gray-400 bg-white text-gray-900 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors placeholder-gray-500"
-                placeholder="admin@test.com"
+                placeholder="admin@example.com"
                 required
               />
             </div>
