@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { ArrowLeft, Loader2, Save, Upload, Monitor, Smartphone, AlertCircle, Trash2 } from 'lucide-react'
 import Link from 'next/link'
@@ -14,10 +14,12 @@ interface HeroBanner {
   is_active: boolean
 }
 
-export default function HeroEditPage({ params }: { params: { _id: string } }) {
+export default function HeroEditPage() {
   const router = useRouter()
+  const params = useParams()
+  const _id = params._id as string
   const supabase = createClient()
-  const isNew = params._id === 'new'
+  const isNew = _id === 'new'
   
   const [loading, setLoading] = useState(false)
   const [uploadError, setUploadError] = useState<string | null>(null)
@@ -31,17 +33,17 @@ export default function HeroEditPage({ params }: { params: { _id: string } }) {
   })
 
   useEffect(() => {
-    if (!isNew) {
+    if (!isNew && _id) {
       fetchBanner()
     }
-  }, [isNew])
+  }, [isNew, _id])
 
   const fetchBanner = async () => {
     setLoading(true)
     const { data, error } = await supabase
       .from('hero_banners')
       .select('*')
-      .eq('id', params._id)
+      .eq('id', _id)
       .single()
     
     if (error) {
@@ -108,7 +110,7 @@ export default function HeroEditPage({ params }: { params: { _id: string } }) {
         const { error } = await supabase.from('hero_banners').insert(banner)
         if (error) throw error
       } else {
-        const { error } = await supabase.from('hero_banners').update(banner).eq('id', params._id)
+        const { error } = await supabase.from('hero_banners').update(banner).eq('id', _id)
         if (error) throw error
       }
       
@@ -126,7 +128,7 @@ export default function HeroEditPage({ params }: { params: { _id: string } }) {
     
     setSaving(true)
     try {
-      const { error } = await supabase.from('hero_banners').delete().eq('id', params._id)
+      const { error } = await supabase.from('hero_banners').delete().eq('id', _id)
       if (error) throw error
       router.push('/admin/hero')
       router.refresh()
