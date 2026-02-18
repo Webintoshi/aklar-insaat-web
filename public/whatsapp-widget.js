@@ -11,7 +11,7 @@
   const CONFIG_URL = '/api/whatsapp/config';
   const TRACK_URL = '/api/whatsapp/track';
   const LS_KEY = 'wa_widget_cfg';
-  const LS_TTL_MS = 30000; // 30 saniye cache
+  const LS_TTL_MS = 5000; // 5 saniye cache (daha hızlı güncelleme için)
   
   let config = null;
   let widgetElement = null;
@@ -491,7 +491,7 @@
 
     try {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 5000);
+      const timeoutId = setTimeout(() => controller.abort(), 1000); // 1 saniye timeout
 
       const res = await fetch(CONFIG_URL, { 
         signal: controller.signal 
@@ -568,15 +568,21 @@
       return;
     }
 
-    // Widget oluştur (gizli)
-    console.log('[WA Widget] Creating widget...');
+    // Widget'ı hemen oluştur ama gecikmeli göster
+    console.log('[WA Widget] Creating widget immediately...');
     createWidget();
-
-    // Gecikmeli göster
-    setTimeout(() => {
-      console.log('[WA Widget] Showing widget');
+    
+    // Hemen göster (minumum gecikme)
+    const delay = Math.min(config.show_delay_ms || 500, 1000);
+    if (delay <= 100) {
+      // 100ms veya daha az ise hemen göster
       showWidget();
-    }, config.show_delay_ms || 2000);
+    } else {
+      setTimeout(() => {
+        console.log('[WA Widget] Showing widget after', delay, 'ms');
+        showWidget();
+      }, delay);
+    }
   }
 
   // Başlat
