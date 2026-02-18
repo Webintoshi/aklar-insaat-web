@@ -14,6 +14,7 @@ import {
   Video,
   BarChart3,
   MessageCircle,
+  HardHat,
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 
@@ -24,6 +25,7 @@ const navigation = [
   { name: 'Video Bölümü', href: '/admin/video', icon: Video },
   { name: 'İstatistikler', href: '/admin/infocards', icon: BarChart3 },
   { name: 'Sayfalar', href: '/admin/pages', icon: FileText },
+  { name: 'Projeler', href: '/admin/projeler', icon: HardHat },
   { name: 'Tamamlanmış Projeler', href: '/admin/projects/completed', icon: Building2 },
   { name: 'Devam Eden Projeler', href: '/admin/projects/ongoing', icon: FolderKanban },
   { name: 'İletişim Mesajları', href: '/admin/messages', icon: MessageSquare },

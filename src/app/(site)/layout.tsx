@@ -39,7 +39,7 @@ export default async function SiteLayout({
     <html lang="tr" className={`${playfair.variable} ${inter.variable} scroll-smooth`}>
       <body className="font-sans antialiased bg-off-white text-gray-800">
         <Header />
-        <div className="pt-[130px]">
+        <div className="pt-[120px]">
           {children}
         </div>
         <Footer data={footerData} />
