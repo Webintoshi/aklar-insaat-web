@@ -6,18 +6,19 @@ import {
   Phone, 
   MessageCircle, 
   Palette, 
-  Eye, 
   EyeOff,
   Save,
   RefreshCw,
   CheckCircle,
   AlertCircle,
   Monitor,
-  Smartphone
+  Smartphone,
+  Plus
 } from 'lucide-react'
 
 interface WhatsAppConfig {
-  id: string
+  id?: string
+  created_at?: string
   is_enabled: boolean
   position: 'bottom-right' | 'bottom-left' | 'top-right' | 'top-left'
   button_color: string
@@ -30,8 +31,23 @@ interface WhatsAppConfig {
   show_on_desktop: boolean
   hidden_url_patterns: string[]
   default_message: string
-  is_multi_agent: boolean
   phone_number: string
+}
+
+const DEFAULT_CONFIG: WhatsAppConfig = {
+  is_enabled: true,
+  position: 'bottom-right',
+  button_color: '#25D366',
+  button_size: 60,
+  show_tooltip: true,
+  tooltip_text: 'Bize WhatsApp\'tan yazın!',
+  pulse_animation: true,
+  show_delay_ms: 2000,
+  show_on_mobile: true,
+  show_on_desktop: true,
+  hidden_url_patterns: ['/admin'],
+  default_message: 'Merhaba, web sitenizden ulaşıyorum.',
+  phone_number: '+905457277297',
 }
 
 const PRESET_COLORS = [
@@ -56,13 +72,13 @@ const POSITIONS = [
 
 export default function WhatsAppAdminPage() {
   const supabase = createClient()
-  const [config, setConfig] = useState<WhatsAppConfig | null>(null)
+  const [config, setConfig] = useState<WhatsAppConfig>(DEFAULT_CONFIG)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [isNew, setIsNew] = useState(true)
   const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null)
   const [urlPattern, setUrlPattern] = useState('')
 
-  // Config'i yükle
   useEffect(() => {
     loadConfig()
   }, [])
@@ -72,10 +88,20 @@ export default function WhatsAppAdminPage() {
       const { data, error } = await supabase
         .from('whatsapp_widget_config')
         .select('*')
-        .single()
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle()
 
-      if (error) throw error
-      setConfig(data)
+      if (error) {
+        console.error('Config load error:', error)
+        showMessage('error', 'Ayarlar yüklenirken bir hata oluştu.')
+      } else if (data) {
+        setConfig(data)
+        setIsNew(false)
+      } else {
+        // Veri yok, varsayılan değerleri kullan
+        setIsNew(true)
+      }
     } catch (err) {
       console.error('Config load error:', err)
       showMessage('error', 'Ayarlar yüklenirken bir hata oluştu.')
@@ -90,32 +116,55 @@ export default function WhatsAppAdminPage() {
   }
 
   const handleSave = async () => {
-    if (!config) return
-
     setSaving(true)
     try {
-      const { error } = await supabase
-        .from('whatsapp_widget_config')
-        .update({
-          is_enabled: config.is_enabled,
-          position: config.position,
-          button_color: config.button_color,
-          button_size: config.button_size,
-          show_tooltip: config.show_tooltip,
-          tooltip_text: config.tooltip_text,
-          pulse_animation: config.pulse_animation,
-          show_delay_ms: config.show_delay_ms,
-          show_on_mobile: config.show_on_mobile,
-          show_on_desktop: config.show_on_desktop,
-          hidden_url_patterns: config.hidden_url_patterns,
-          default_message: config.default_message,
-          phone_number: config.phone_number,
-          is_multi_agent: config.is_multi_agent,
-        })
-        .eq('id', config.id)
+      if (isNew) {
+        // Yeni kayıt oluştur
+        const { error } = await supabase
+          .from('whatsapp_widget_config')
+          .insert({
+            is_enabled: config.is_enabled,
+            position: config.position,
+            button_color: config.button_color,
+            button_size: config.button_size,
+            show_tooltip: config.show_tooltip,
+            tooltip_text: config.tooltip_text,
+            pulse_animation: config.pulse_animation,
+            show_delay_ms: config.show_delay_ms,
+            show_on_mobile: config.show_on_mobile,
+            show_on_desktop: config.show_on_desktop,
+            hidden_url_patterns: config.hidden_url_patterns,
+            default_message: config.default_message,
+            phone_number: config.phone_number,
+          })
 
-      if (error) throw error
-      showMessage('success', 'Ayarlar başarıyla kaydedildi! Değişiklikler 30 saniye içinde aktif olacak.')
+        if (error) throw error
+        setIsNew(false)
+        showMessage('success', 'Ayarlar başarıyla oluşturuldu!')
+      } else {
+        // Mevcut kaydı güncelle
+        const { error } = await supabase
+          .from('whatsapp_widget_config')
+          .update({
+            is_enabled: config.is_enabled,
+            position: config.position,
+            button_color: config.button_color,
+            button_size: config.button_size,
+            show_tooltip: config.show_tooltip,
+            tooltip_text: config.tooltip_text,
+            pulse_animation: config.pulse_animation,
+            show_delay_ms: config.show_delay_ms,
+            show_on_mobile: config.show_on_mobile,
+            show_on_desktop: config.show_on_desktop,
+            hidden_url_patterns: config.hidden_url_patterns,
+            default_message: config.default_message,
+            phone_number: config.phone_number,
+          })
+          .eq('id', config.id)
+
+        if (error) throw error
+        showMessage('success', 'Ayarlar başarıyla güncellendi!')
+      }
     } catch (err) {
       console.error('Save error:', err)
       showMessage('error', 'Kaydetme sırasında bir hata oluştu.')
@@ -125,7 +174,7 @@ export default function WhatsAppAdminPage() {
   }
 
   const addUrlPattern = () => {
-    if (!urlPattern.trim() || !config) return
+    if (!urlPattern.trim()) return
     if (config.hidden_url_patterns.includes(urlPattern.trim())) {
       showMessage('error', 'Bu pattern zaten ekli.')
       return
@@ -138,7 +187,6 @@ export default function WhatsAppAdminPage() {
   }
 
   const removeUrlPattern = (pattern: string) => {
-    if (!config) return
     setConfig({
       ...config,
       hidden_url_patterns: config.hidden_url_patterns.filter(p => p !== pattern)
@@ -146,7 +194,6 @@ export default function WhatsAppAdminPage() {
   }
 
   const validatePhone = (phone: string) => {
-    // E.164 format kontrolü: +905xxxxxxxxx
     return phone.match(/^\+[1-9]\d{7,14}$/)
   }
 
@@ -158,23 +205,17 @@ export default function WhatsAppAdminPage() {
     )
   }
 
-  if (!config) {
-    return (
-      <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-        <div className="flex items-center">
-          <AlertCircle className="w-5 h-5 text-red-600 mr-2" />
-          <p className="text-red-600">Konfigürasyon yüklenemedi. Lütfen sayfayı yenileyin.</p>
-        </div>
-      </div>
-    )
-  }
-
   return (
     <div className="max-w-5xl mx-auto">
       <div className="flex items-center justify-between mb-8">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">WhatsApp Widget</h1>
-          <p className="text-gray-500 mt-1">Siteye WhatsApp sohbet widget'ı ekleyin ve yönetin.</p>
+          <p className="text-gray-500 mt-1">
+            {isNew 
+              ? 'Henüz ayar oluşturulmamış. Varsayılan değerleri kullanarak yeni bir yapılandırma oluşturabilirsiniz.'
+              : 'Siteye WhatsApp sohbet widget\'ı ekleyin ve yönetin.'
+            }
+          </p>
         </div>
         <button
           onClick={handleSave}
@@ -188,12 +229,24 @@ export default function WhatsAppAdminPage() {
             </>
           ) : (
             <>
-              <Save className="w-5 h-5 mr-2" />
-              Kaydet
+              {isNew ? <Plus className="w-5 h-5 mr-2" /> : <Save className="w-5 h-5 mr-2" />}
+              {isNew ? 'Oluştur' : 'Kaydet'}
             </>
           )}
         </button>
       </div>
+
+      {isNew && (
+        <div className="mb-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
+          <div className="flex items-center">
+            <AlertCircle className="w-5 h-5 text-blue-600 mr-2" />
+            <p className="text-blue-700">
+              <strong>Yeni Kurulum:</strong> Henüz WhatsApp widget ayarı bulunmuyor. 
+              Aşağıdaki formu doldurarak ilk yapılandırmayı oluşturabilirsiniz.
+            </p>
+          </div>
+        </div>
+      )}
 
       {message && (
         <div className={`mb-6 p-4 rounded-lg flex items-center ${
