@@ -1,6 +1,10 @@
 import type { Metadata } from 'next'
 import { Playfair_Display, Inter } from 'next/font/google'
 import '../globals.css'
+import { TopBar } from './_components/TopBar'
+import { Header } from './_components/Header'
+import { Footer } from './_sections/Footer'
+import { getFooterSettings } from '@/lib/api/frontend-data'
 
 const playfair = Playfair_Display({
   subsets: ['latin'],
@@ -25,15 +29,22 @@ export const metadata: Metadata = {
   },
 }
 
-export default function SiteLayout({
+export default async function SiteLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
+  const footerData = await getFooterSettings()
+
   return (
     <html lang="tr" className={`${playfair.variable} ${inter.variable} scroll-smooth`}>
       <body className="font-sans antialiased bg-off-white text-gray-800">
-        {children}
+        <TopBar />
+        <Header />
+        <div className="pt-20">
+          {children}
+        </div>
+        <Footer data={footerData} />
       </body>
     </html>
   )
