@@ -4,7 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 // GET: Proje detay
 export async function GET(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const supabase = await createClient();
@@ -14,10 +14,12 @@ export async function GET(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const { id } = await params;
+
     const { data, error } = await supabase
       .from("projects")
       .select("*, project_media(*)")
-      .eq("id", params.id)
+      .eq("id", id)
       .single();
 
     if (error) {
@@ -41,7 +43,7 @@ export async function GET(
 // PUT: Proje güncelle
 export async function PUT(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const supabase = await createClient();
@@ -51,6 +53,7 @@ export async function PUT(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const { id } = await params;
     const body = await req.json();
     
     // Slug güncelleme varsa kontrol et
@@ -61,7 +64,7 @@ export async function PUT(
     const { data, error } = await supabase
       .from("projects")
       .update(body)
-      .eq("id", params.id)
+      .eq("id", id)
       .select()
       .single();
 
@@ -83,7 +86,7 @@ export async function PUT(
 // DELETE: Proje sil
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const supabase = await createClient();
@@ -93,11 +96,13 @@ export async function DELETE(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const { id } = await params;
+
     // Önce medyaları al (R2'den silmek için)
     const { data: media } = await supabase
       .from("project_media")
       .select("id, r2_key")
-      .eq("project_id", params.id);
+      .eq("project_id", id);
 
     // Medyaları R2'den sil (opsiyonel - cascade delete de çalışır)
     // Not: Burada R2 silme işlemi yapılabilir
@@ -106,7 +111,7 @@ export async function DELETE(
     const { error } = await supabase
       .from("projects")
       .delete()
-      .eq("id", params.id);
+      .eq("id", id);
 
     if (error) {
       console.error("Project delete error:", error);
