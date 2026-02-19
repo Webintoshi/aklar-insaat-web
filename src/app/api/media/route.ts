@@ -10,36 +10,28 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const body = await req.json();
+    
     const { 
-      projectId, 
-      r2Key, 
-      publicUrl, 
+      project_id, 
+      url, 
       category, 
-      altText, 
-      fileSize, 
-      width, 
-      height 
-    } = await req.json();
+      sort_order = 0
+    } = body;
 
-    // Mevcut sıra sayısını bul
-    const { count } = await supabase
-      .from("project_media")
-      .select("*", { count: "exact", head: true })
-      .eq("project_id", projectId)
-      .eq("category", category);
+    if (!project_id || !url || !category) {
+      return NextResponse.json({ 
+        error: "project_id, url ve category zorunludur" 
+      }, { status: 400 });
+    }
 
     const { data, error } = await supabase
       .from("project_media")
       .insert({
-        project_id: projectId,
-        r2_key: r2Key,
-        url: publicUrl,
+        project_id,
+        url,
         category,
-        alt_text: altText || "",
-        file_size: fileSize,
-        width,
-        height,
-        sort_order: count ?? 0,
+        sort_order,
       })
       .select()
       .single();
