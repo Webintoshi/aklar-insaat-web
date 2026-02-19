@@ -88,12 +88,14 @@ export async function POST(req: NextRequest) {
       name: body.name.trim(),
       slug: slug.toLowerCase(),
       status: body.status || 'draft',
+      project_status: body.project_status || 'ongoing',
       is_featured: body.is_featured || false,
       created_by: user.id,
     };
     
     // Opsiyonel alanlar - sadece değer varsa ekle
     if (body.about_text?.trim()) insertData.about_text = body.about_text.trim();
+    if (body.about_image_url?.trim()) insertData.about_image_url = body.about_image_url.trim();
     if (body.cta_text?.trim()) insertData.cta_text = body.cta_text.trim();
     if (body.apartment_options?.trim()) insertData.apartment_options = body.apartment_options.trim();
     if (body.neighborhood?.trim()) insertData.neighborhood = body.neighborhood.trim();

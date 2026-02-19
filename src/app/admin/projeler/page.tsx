@@ -19,6 +19,7 @@ interface Project {
   name: string
   slug: string
   status: 'draft' | 'published' | 'archived'
+  project_status: 'completed' | 'ongoing'
   is_featured: boolean
   about_image_url: string | null
   created_at: string
@@ -30,6 +31,7 @@ export default function ProjelerAdminPage() {
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
   const [filterStatus, setFilterStatus] = useState<string>('all')
+  const [filterProjectStatus, setFilterProjectStatus] = useState<string>('all')
   const supabase = createClient()
 
   useEffect(() => {
@@ -82,7 +84,8 @@ export default function ProjelerAdminPage() {
     const matchesSearch = project.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          project.slug.toLowerCase().includes(searchTerm.toLowerCase())
     const matchesStatus = filterStatus === 'all' || project.status === filterStatus
-    return matchesSearch && matchesStatus
+    const matchesProjectStatus = filterProjectStatus === 'all' || project.project_status === filterProjectStatus
+    return matchesSearch && matchesStatus && matchesProjectStatus
   })
 
   const getStatusBadge = (status: string) => {
@@ -95,6 +98,17 @@ export default function ProjelerAdminPage() {
         return <span className="px-2 py-1 bg-gray-100 text-gray-700 rounded-full text-xs font-medium">Arşiv</span>
       default:
         return null
+    }
+  }
+
+  const getProjectStatusBadge = (status: string) => {
+    switch (status) {
+      case 'completed':
+        return <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-medium">Tamamlandı</span>
+      case 'ongoing':
+        return <span className="px-2 py-1 bg-amber-100 text-amber-700 rounded-full text-xs font-medium">Devam Ediyor</span>
+      default:
+        return <span className="px-2 py-1 bg-gray-100 text-gray-700 rounded-full text-xs font-medium">Devam Ediyor</span>
     }
   }
 
@@ -142,10 +156,19 @@ export default function ProjelerAdminPage() {
               onChange={(e) => setFilterStatus(e.target.value)}
               className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
             >
-              <option value="all">Tümü</option>
+              <option value="all">Tüm Durumlar</option>
               <option value="published">Yayında</option>
               <option value="draft">Taslak</option>
               <option value="archived">Arşiv</option>
+            </select>
+            <select
+              value={filterProjectStatus}
+              onChange={(e) => setFilterProjectStatus(e.target.value)}
+              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+            >
+              <option value="all">Tüm Projeler</option>
+              <option value="completed">Tamamlanan</option>
+              <option value="ongoing">Devam Eden</option>
             </select>
           </div>
         </div>
@@ -188,9 +211,10 @@ export default function ProjelerAdminPage() {
                     <Star className="w-5 h-5 text-yellow-400 fill-yellow-400" />
                   </div>
                 )}
-                {/* Status badge */}
-                <div className="absolute top-3 right-3">
+                {/* Status badges */}
+                <div className="absolute top-3 right-3 flex flex-col gap-1">
                   {getStatusBadge(project.status)}
+                  {getProjectStatusBadge(project.project_status)}
                 </div>
               </div>
 

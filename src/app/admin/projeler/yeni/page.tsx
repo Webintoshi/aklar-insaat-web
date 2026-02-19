@@ -1,43 +1,49 @@
 'use client'
 
-import { useState } from 'react'
-import { AlertCircle } from 'lucide-react'
+import { useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { ArrowLeft, Save, Building2 } from 'lucide-react'
+import Image from 'next/image'
+import { 
+  ArrowLeft, 
+  Save, 
+  Building2, 
+  Upload, 
+  CheckCircle2, 
+  Clock,
+  AlertCircle,
+  X,
+  Loader2
+} from 'lucide-react'
+
+// Proje durumları
+const PROJECT_STATUSES = [
+  { value: 'completed', label: 'Tamamlandı', icon: CheckCircle2, color: 'bg-blue-500', desc: 'Projesi bitmiş, teslim edilmiş' },
+  { value: 'ongoing', label: 'Devam Ediyor', icon: Clock, color: 'bg-amber-500', desc: 'Yapımı devam eden proje' },
+] as const
 
 interface ProjectForm {
   name: string
-  slug: string
-  status: 'draft' | 'published' | 'archived'
-  is_featured: boolean
+  project_status: 'completed' | 'ongoing'
   about_text: string
-  cta_text: string
-  apartment_options: string
-  neighborhood: string
-  location_description: string
-  meta_title: string
-  meta_desc: string
+  about_image_url: string
 }
 
 export default function YeniProjePage() {
   const router = useRouter()
   const [saving, setSaving] = useState(false)
+  const [uploading, setUploading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  
   const [form, setForm] = useState<ProjectForm>({
     name: '',
-    slug: '',
-    status: 'draft',
-    is_featured: false,
+    project_status: 'ongoing',
     about_text: '',
-    cta_text: 'Devamı',
-    apartment_options: '',
-    neighborhood: '',
-    location_description: '',
-    meta_title: '',
-    meta_desc: '',
+    about_image_url: '',
   })
 
-  const generateSlug = (name: string) => {
+  // Slug oluştur
+  const generateSlug = useCallback((name: string) => {
     return name
       .toLowerCase()
       .replace(/[ıİ]/g, 'i')
@@ -50,44 +56,76 @@ export default function YeniProjePage() {
       .replace(/\s+/g, '-')
       .replace(/-+/g, '-')
       .substring(0, 50)
+  }, [])
+
+  // Fotoğraf yükle
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    // Dosya kontrolü
+    if (!file.type.startsWith('image/')) {
+      setError('Lütfen sadece fotoğraf dosyası yükleyin (JPG, PNG)')
+      return
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setError('Fotoğraf boyutu 5MB\'dan küçük olmalı')
+      return
+    }
+
+    setUploading(true)
+    setError(null)
+
+    try {
+      const formData = new FormData()
+      formData.append('file', file)
+
+      const res = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData,
+      })
+
+      const data = await res.json()
+      
+      if (!res.ok) {
+        throw new Error(data.error || 'Yükleme başarısız')
+      }
+
+      setForm(prev => ({ ...prev, about_image_url: data.url }))
+    } catch (err: any) {
+      setError('Fotoğraf yüklenirken hata: ' + err.message)
+    } finally {
+      setUploading(false)
+    }
   }
 
-  const handleNameChange = (name: string) => {
-    setForm(prev => ({
-      ...prev,
-      name,
-      slug: prev.slug || generateSlug(name)
-    }))
-  }
-
-  const [error, setError] = useState<string | null>(null)
-
+  // Form gönder
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setSaving(true)
     setError(null)
 
     try {
-      // Form validasyonu
       if (!form.name.trim()) {
         setError('Proje adı zorunludur')
         setSaving(false)
         return
       }
-      
-      if (!form.slug.trim()) {
-        setError('URL slug zorunludur')
-        setSaving(false)
-        return
-      }
 
+      const slug = generateSlug(form.name)
+      
       const res = await fetch('/api/projects', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          ...form,
           name: form.name.trim(),
-          slug: form.slug.trim()
+          slug,
+          project_status: form.project_status,
+          about_text: form.about_text.trim() || `${form.name} projesi hakkında detaylı bilgi için bize ulaşın.`,
+          about_image_url: form.about_image_url,
+          status: 'published', // Direkt yayınla
+          is_featured: false,
+          cta_text: 'Detayları Gör',
         })
       })
 
@@ -97,42 +135,17 @@ export default function YeniProjePage() {
         throw new Error(data.error || `Hata: ${res.status}`)
       }
       
-      router.push(`/admin/projeler/${data.id}`)
-    } catch (error: any) {
-      console.error('Create error:', error)
-      setError('Proje oluşturulurken bir hata oluştu: ' + (error.message || 'Bilinmeyen hata'))
+      // Başarılı - projeler listesine dön
+      router.push('/admin/projeler')
+      router.refresh()
+    } catch (err: any) {
+      setError(err.message || 'Proje oluşturulurken bir hata oluştu')
       setSaving(false)
     }
   }
 
   return (
-    <div className="max-w-4xl mx-auto">
-      {/* Hata Mesajı */}
-      {error && (
-        <div className="mb-6 bg-red-50 border border-red-200 rounded-xl p-4">
-          <div className="flex items-start">
-            <div className="flex-shrink-0">
-              <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-              </svg>
-            </div>
-            <div className="ml-3">
-              <h3 className="text-sm font-medium text-red-800">Hata oluştu</h3>
-              <p className="mt-1 text-sm text-red-700">{error}</p>
-            </div>
-            <button 
-              onClick={() => setError(null)}
-              className="ml-auto text-red-400 hover:text-red-600"
-            >
-              <span className="sr-only">Kapat</span>
-              <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
-              </svg>
-            </button>
-          </div>
-        </div>
-      )}
-
+    <div className="max-w-3xl mx-auto pb-20">
       {/* Header */}
       <div className="flex items-center justify-between mb-8">
         <div className="flex items-center">
@@ -143,198 +156,204 @@ export default function YeniProjePage() {
             <ArrowLeft className="w-5 h-5" />
           </Link>
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Yeni Proje</h1>
-            <p className="text-gray-500 mt-1">Yeni bir proje oluşturun ve görsellerini ekleyin.</p>
+            <h1 className="text-2xl font-bold text-gray-900">Yeni Proje Ekle</h1>
+            <p className="text-gray-500 mt-1">Yeni bir proje oluşturun ve fotoğrafını yükleyin.</p>
           </div>
         </div>
-        <button
-          onClick={handleSubmit}
-          disabled={saving || !form.name}
-          className="flex items-center px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors disabled:opacity-50"
-        >
-          {saving ? (
-            <>
-              <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
-              Oluşturuluyor...
-            </>
-          ) : (
-            <>
-              <Save className="w-5 h-5 mr-2" />
-              Oluştur ve Devam Et
-            </>
-          )}
-        </button>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-6">
-        {/* Temel Bilgiler */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-          <div className="flex items-center mb-6">
-            <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center mr-3">
+      {/* Hata Mesajı */}
+      {error && (
+        <div className="mb-6 bg-red-50 border border-red-200 rounded-xl p-4 flex items-start">
+          <AlertCircle className="w-5 h-5 text-red-500 mt-0.5 mr-3 flex-shrink-0" />
+          <p className="text-red-700">{error}</p>
+          <button 
+            onClick={() => setError(null)}
+            className="ml-auto text-red-400 hover:text-red-600"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+      )}
+
+      <form onSubmit={handleSubmit} className="space-y-8">
+        {/* 1. Proje Adı */}
+        <section className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center">
               <Building2 className="w-5 h-5 text-blue-600" />
             </div>
-            <h2 className="text-lg font-semibold text-gray-900">Temel Bilgiler</h2>
+            <div>
+              <h2 className="text-lg font-semibold text-gray-900">Proje Adı</h2>
+              <p className="text-sm text-gray-500">Projenin görünen adı</p>
+            </div>
+          </div>
+          
+          <input
+            type="text"
+            value={form.name}
+            onChange={(e) => setForm(prev => ({ ...prev, name: e.target.value }))}
+            placeholder="Örn: Lotus Yaşam Evleri"
+            className="w-full px-4 py-3 text-lg border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+            required
+          />
+        </section>
+
+        {/* 2. Proje Durumu */}
+        <section className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-10 h-10 bg-purple-100 rounded-xl flex items-center justify-center">
+              <CheckCircle2 className="w-5 h-5 text-purple-600" />
+            </div>
+            <div>
+              <h2 className="text-lg font-semibold text-gray-900">Proje Durumu</h2>
+              <p className="text-sm text-gray-500">Proje tamamlandı mı yoksa devam ediyor mu?</p>
+            </div>
           </div>
 
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Proje Adı <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="text"
-                value={form.name}
-                onChange={(e) => handleNameChange(e.target.value)}
-                placeholder="Örn: AZAK PARK EVLERİ"
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-                required
-              />
-            </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {PROJECT_STATUSES.map((status) => {
+              const Icon = status.icon
+              const isSelected = form.project_status === status.value
+              
+              return (
+                <button
+                  key={status.value}
+                  type="button"
+                  onClick={() => setForm(prev => ({ ...prev, project_status: status.value }))}
+                  className={`relative p-4 rounded-xl border-2 text-left transition-all ${
+                    isSelected 
+                      ? 'border-blue-500 bg-blue-50' 
+                      : 'border-gray-200 hover:border-gray-300'
+                  }`}
+                >
+                  <div className="flex items-start gap-3">
+                    <div className={`w-10 h-10 ${status.color} rounded-lg flex items-center justify-center flex-shrink-0`}>
+                      <Icon className="w-5 h-5 text-white" />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-gray-900">{status.label}</h3>
+                      <p className="text-sm text-gray-500 mt-0.5">{status.desc}</p>
+                    </div>
+                  </div>
+                  {isSelected && (
+                    <div className="absolute top-3 right-3">
+                      <div className="w-5 h-5 bg-blue-500 rounded-full flex items-center justify-center">
+                        <CheckCircle2 className="w-3 h-3 text-white" />
+                      </div>
+                    </div>
+                  )}
+                </button>
+              )
+            })}
+          </div>
+        </section>
 
+        {/* 3. Kapak Fotoğrafı */}
+        <section className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-10 h-10 bg-green-100 rounded-xl flex items-center justify-center">
+              <Upload className="w-5 h-5 text-green-600" />
+            </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                URL Slug <span className="text-red-500">*</span>
-              </label>
-              <div className="flex items-center">
-                <span className="text-gray-500 mr-2">/projeler/</span>
-                <input
-                  type="text"
-                  value={form.slug}
-                  onChange={(e) => setForm({ ...form, slug: e.target.value })}
-                  placeholder="azak-park-evleri"
-                  className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-                  required
+              <h2 className="text-lg font-semibold text-gray-900">Kapak Fotoğrafı</h2>
+              <p className="text-sm text-gray-500">Proje listesinde gösterilecek ana fotoğraf</p>
+            </div>
+          </div>
+
+          {form.about_image_url ? (
+            <div className="relative rounded-xl overflow-hidden">
+              <div className="aspect-[16/9] relative">
+                <Image
+                  src={form.about_image_url}
+                  alt="Proje kapak fotoğrafı"
+                  fill
+                  className="object-cover"
                 />
               </div>
+              <button
+                type="button"
+                onClick={() => setForm(prev => ({ ...prev, about_image_url: '' }))}
+                className="absolute top-3 right-3 p-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors shadow-lg"
+              >
+                <X className="w-4 h-4" />
+              </button>
             </div>
+          ) : (
+            <label className={`block border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-colors ${
+              uploading ? 'border-blue-400 bg-blue-50' : 'border-gray-300 hover:border-gray-400'
+            }`}>
+              {uploading ? (
+                <div className="flex flex-col items-center">
+                  <Loader2 className="w-10 h-10 text-blue-500 animate-spin mb-3" />
+                  <p className="text-gray-600 font-medium">Fotoğraf yükleniyor...</p>
+                </div>
+              ) : (
+                <>
+                  <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <Upload className="w-8 h-8 text-gray-400" />
+                  </div>
+                  <p className="text-gray-600 font-medium mb-1">Fotoğraf Yüklemek İçin Tıklayın</p>
+                  <p className="text-gray-400 text-sm">JPG, PNG formatları • Max 5MB</p>
+                </>
+              )}
+              <input
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={handleImageUpload}
+                disabled={uploading}
+              />
+            </label>
+          )}
+        </section>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Durum</label>
-                <select
-                  value={form.status}
-                  onChange={(e) => setForm({ ...form, status: e.target.value as any })}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-                >
-                  <option value="draft">🟡 Taslak</option>
-                  <option value="published">🟢 Yayında</option>
-                  <option value="archived">🔴 Arşiv</option>
-                </select>
-              </div>
-              <div className="flex items-center">
-                <label className="flex items-center cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={form.is_featured}
-                    onChange={(e) => setForm({ ...form, is_featured: e.target.checked })}
-                    className="w-5 h-5 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
-                  />
-                  <span className="ml-2 text-gray-700">Öne çıkan proje</span>
-                </label>
-              </div>
+        {/* 4. Kısa Açıklama (Opsiyonel) */}
+        <section className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-10 h-10 bg-amber-100 rounded-xl flex items-center justify-center">
+              <Building2 className="w-5 h-5 text-amber-600" />
+            </div>
+            <div>
+              <h2 className="text-lg font-semibold text-gray-900">Kısa Açıklama</h2>
+              <p className="text-sm text-gray-500">Opsiyonel - Proje hakkında kısa bilgi</p>
             </div>
           </div>
-        </div>
+          
+          <textarea
+            value={form.about_text}
+            onChange={(e) => setForm(prev => ({ ...prev, about_text: e.target.value }))}
+            placeholder="Proje hakkında kısa bir açıklama yazın..."
+            rows={3}
+            className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none resize-none"
+          />
+        </section>
 
-        {/* İçerik */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-6">İçerik</h2>
-
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Tanıtım Metni (Bölüm 1 - Sağ taraf)
-              </label>
-              <textarea
-                value={form.about_text}
-                onChange={(e) => setForm({ ...form, about_text: e.target.value })}
-                rows={4}
-                placeholder="%50 PEŞİN KALANI 12-24 AY 0 VADE FARKSIZ..."
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none resize-none"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                CTA Buton Metni
-              </label>
-              <input
-                type="text"
-                value={form.cta_text}
-                onChange={(e) => setForm({ ...form, cta_text: e.target.value })}
-                placeholder="Devamı"
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Daire Seçenekleri (Bölüm 4)
-              </label>
-              <input
-                type="text"
-                value={form.apartment_options}
-                onChange={(e) => setForm({ ...form, apartment_options: e.target.value })}
-                placeholder="3+1 130 – 2+1 90 M2 DAİRE SEÇENEKLERİ"
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Mahalle / Konum Başlığı
-              </label>
-              <input
-                type="text"
-                value={form.neighborhood}
-                onChange={(e) => setForm({ ...form, neighborhood: e.target.value })}
-                placeholder="ŞAHİNCİLİ MAHALLESİ"
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Konum Açıklaması (Bölüm 4 - Sağ taraf)
-              </label>
-              <textarea
-                value={form.location_description}
-                onChange={(e) => setForm({ ...form, location_description: e.target.value })}
-                rows={4}
-                placeholder="ŞAHİNCİLİ TAKSİ DURAĞIYANINDA IHLAMUR VADİSİNİN 50 MT. ÜSTÜNDE..."
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none resize-none"
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* SEO */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-6">SEO Ayarları</h2>
-
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Meta Başlık</label>
-              <input
-                type="text"
-                value={form.meta_title}
-                onChange={(e) => setForm({ ...form, meta_title: e.target.value })}
-                placeholder="Proje Adı | Aklar İnşaat"
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Meta Açıklama</label>
-              <textarea
-                value={form.meta_desc}
-                onChange={(e) => setForm({ ...form, meta_desc: e.target.value })}
-                rows={3}
-                placeholder="Proje hakkında kısa açıklama..."
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none resize-none"
-              />
-            </div>
-          </div>
+        {/* Kaydet Butonu */}
+        <div className="flex items-center justify-between pt-4">
+          <Link
+            href="/admin/projeler"
+            className="px-6 py-3 text-gray-600 hover:text-gray-800 font-medium"
+          >
+            İptal
+          </Link>
+          <button
+            type="submit"
+            disabled={saving || uploading || !form.name.trim()}
+            className="flex items-center px-8 py-3 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold rounded-xl transition-colors shadow-lg shadow-blue-200"
+          >
+            {saving ? (
+              <>
+                <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                Kaydediliyor...
+              </>
+            ) : (
+              <>
+                <Save className="w-5 h-5 mr-2" />
+                Projeyi Oluştur
+              </>
+            )}
+          </button>
         </div>
       </form>
     </div>

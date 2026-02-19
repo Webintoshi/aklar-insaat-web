@@ -1,21 +1,57 @@
 import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
-import { Building2, ArrowRight } from 'lucide-react'
+import { Building2, ArrowRight, CheckCircle2, Clock } from 'lucide-react'
 
 export const metadata = {
   title: 'Projeler | Aklar İnşaat',
   description: 'Aklar İnşaat projeleri, tamamlanan ve devam eden konut projelerimizi keşfedin.',
 }
 
-export default async function ProjelerPage() {
-  const supabase = await createClient()
+interface Props {
+  searchParams: { status?: string }
+}
 
-  const { data: projects } = await supabase
+export default async function ProjelerPage({ searchParams }: Props) {
+  const supabase = await createClient()
+  
+  // URL'den durum parametresini al (varsayılan: tümü)
+  const currentStatus = searchParams?.status || 'all'
+
+  // Projeleri çek
+  let query = supabase
     .from('projects')
-    .select('id, name, slug, about_image_url, is_featured')
+    .select('id, name, slug, about_image_url, is_featured, project_status')
     .eq('status', 'published')
+    .order('is_featured', { ascending: false })
     .order('sort_order', { ascending: true })
     .order('created_at', { ascending: false })
+
+  // Filtre uygula
+  if (currentStatus === 'completed') {
+    query = query.eq('project_status', 'completed')
+  } else if (currentStatus === 'ongoing') {
+    query = query.eq('project_status', 'ongoing')
+  }
+
+  const { data: projects } = await query
+
+  // Durum badge'i
+  const StatusBadge = ({ status }: { status: string }) => {
+    if (status === 'completed') {
+      return (
+        <span className="absolute top-4 right-4 bg-blue-500 text-white px-3 py-1 rounded-full text-sm font-medium flex items-center gap-1.5">
+          <CheckCircle2 className="w-4 h-4" />
+          Tamamlandı
+        </span>
+      )
+    }
+    return (
+      <span className="absolute top-4 right-4 bg-amber-500 text-white px-3 py-1 rounded-full text-sm font-medium flex items-center gap-1.5">
+        <Clock className="w-4 h-4" />
+        Devam Ediyor
+      </span>
+    )
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -30,15 +66,55 @@ export default async function ProjelerPage() {
         </div>
       </div>
 
+      {/* Filtre Sekmeleri */}
+      <div className="bg-white border-b">
+        <div className="container mx-auto px-4">
+          <div className="flex gap-2 -mb-px overflow-x-auto">
+            <Link
+              href="/projeler"
+              className={`px-6 py-4 font-medium border-b-2 transition-colors whitespace-nowrap ${
+                currentStatus === 'all'
+                  ? 'border-[#1E3A5F] text-[#1E3A5F]'
+                  : 'border-transparent text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              Tüm Projeler
+            </Link>
+            <Link
+              href="/projeler?status=completed"
+              className={`px-6 py-4 font-medium border-b-2 transition-colors whitespace-nowrap flex items-center gap-2 ${
+                currentStatus === 'completed'
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              <CheckCircle2 className="w-4 h-4" />
+              Tamamlananlar
+            </Link>
+            <Link
+              href="/projeler?status=ongoing"
+              className={`px-6 py-4 font-medium border-b-2 transition-colors whitespace-nowrap flex items-center gap-2 ${
+                currentStatus === 'ongoing'
+                  ? 'border-amber-500 text-amber-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              <Clock className="w-4 h-4" />
+              Devam Edenler
+            </Link>
+          </div>
+        </div>
+      </div>
+
       {/* Projects Grid */}
-      <div className="container mx-auto px-4 py-16">
+      <div className="container mx-auto px-4 py-12">
         {projects && projects.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {projects.map((project) => (
               <Link
                 key={project.id}
                 href={`/projeler/${project.slug}`}
-                className="group bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow"
+                className="group bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-xl transition-all hover:-translate-y-1"
               >
                 {/* Image */}
                 <div className="aspect-[4/3] relative overflow-hidden">
@@ -53,6 +129,11 @@ export default async function ProjelerPage() {
                       <Building2 className="w-16 h-16 text-gray-300" />
                     </div>
                   )}
+                  
+                  {/* Durum Badge */}
+                  <StatusBadge status={project.project_status || 'ongoing'} />
+                  
+                  {/* Öne Çıkan Badge */}
                   {project.is_featured && (
                     <div className="absolute top-4 left-4 bg-[#C9A962] text-white px-3 py-1 rounded-full text-sm font-medium">
                       Öne Çıkan
@@ -62,7 +143,7 @@ export default async function ProjelerPage() {
 
                 {/* Content */}
                 <div className="p-6">
-                  <h2 className="text-xl font-bold text-gray-900 mb-2 group-hover:text-[#1E3A5F] transition-colors">
+                  <h2 className="text-xl font-bold text-gray-900 mb-3 group-hover:text-[#1E3A5F] transition-colors">
                     {project.name}
                   </h2>
                   <div className="flex items-center text-[#1E3A5F] font-medium">
@@ -74,10 +155,22 @@ export default async function ProjelerPage() {
             ))}
           </div>
         ) : (
-          <div className="text-center py-16">
-            <Building2 className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">Henüz Proje Yok</h2>
-            <p className="text-gray-500">Yakında yeni projelerimizi burada görebilirsiniz.</p>
+          <div className="text-center py-20">
+            <Building2 className="w-20 h-20 text-gray-200 mx-auto mb-6" />
+            <h2 className="text-2xl font-bold text-gray-900 mb-3">
+              {currentStatus === 'completed' 
+                ? 'Henüz Tamamlanan Proje Yok' 
+                : currentStatus === 'ongoing'
+                ? 'Henüz Devam Eden Proje Yok'
+                : 'Henüz Proje Yok'}
+            </h2>
+            <p className="text-gray-500 max-w-md mx-auto">
+              {currentStatus === 'completed' 
+                ? 'Tamamlanan projelerimiz yakında burada listelenecek.' 
+                : currentStatus === 'ongoing'
+                ? 'Devam eden projelerimiz yakında burada listelenecek.'
+                : 'Yakında yeni projelerimizi burada görebilirsiniz.'}
+            </p>
           </div>
         )}
       </div>
