@@ -5,7 +5,8 @@
 -- 1. Eksik kolonları ekle (varsa tekrar ekleme)
 ALTER TABLE projects 
 ADD COLUMN IF NOT EXISTS about_image_url TEXT,
-ADD COLUMN IF NOT EXISTS project_status TEXT DEFAULT 'ongoing' CHECK (project_status IN ('completed', 'ongoing'));
+ADD COLUMN IF NOT EXISTS project_status TEXT DEFAULT 'ongoing' CHECK (project_status IN ('completed', 'ongoing')),
+ADD COLUMN IF NOT EXISTS created_by UUID REFERENCES auth.users(id);
 
 -- 2. project_media tablosunun varlığını kontrol et
 CREATE TABLE IF NOT EXISTS project_media (

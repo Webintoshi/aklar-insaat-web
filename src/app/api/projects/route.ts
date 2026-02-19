@@ -90,8 +90,12 @@ export async function POST(req: NextRequest) {
       status: body.status || 'draft',
       project_status: body.project_status || 'ongoing',
       is_featured: body.is_featured || false,
-      created_by: user.id,
     };
+    
+    // created_by varsa ekle (schema cache sorunu olmaması için)
+    if (user?.id) {
+      insertData.created_by = user.id;
+    }
     
     // Opsiyonel alanlar - sadece değer varsa ekle
     if (body.about_text?.trim()) insertData.about_text = body.about_text.trim();
