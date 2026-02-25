@@ -55,16 +55,31 @@ export default async function ProjelerPage({ searchParams }: Props) {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <div className="bg-[#1E3A5F] text-white py-16">
-        <div className="container mx-auto px-4">
-          <h1 className="text-4xl md:text-5xl font-bold mb-4">Projelerimiz</h1>
-          <p className="text-xl text-white/80 max-w-2xl">
-            Kaliteli ve modern yaşam alanları inşa ediyoruz. 
-            Tamamlanan ve devam eden projelerimizi keşfedin.
-          </p>
+      {/* Hero Section */}
+      <section className="relative bg-[#1E3A5F] text-white py-12 lg:py-16 overflow-hidden">
+        {/* Background Image */}
+        <div className="absolute inset-0 opacity-10">
+          <img
+            src="/images/about-building.jpg"
+            alt=""
+            className="w-full h-full object-cover"
+          />
         </div>
-      </div>
+        <div className="container mx-auto px-4 relative z-10">
+          <div className="max-w-3xl">
+            <nav className="flex items-center gap-2 text-sm text-white/60 mb-6">
+              <a href="/" className="hover:text-white transition-colors">Anasayfa</a>
+              <span>/</span>
+              <span className="text-white">Projeler</span>
+            </nav>
+            <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6">Projelerimiz</h1>
+            <p className="text-xl text-white/80 max-w-2xl">
+              Kaliteli ve modern yaşam alanları inşa ediyoruz. 
+              Tamamlanan ve devam eden projelerimizi keşfedin.
+            </p>
+          </div>
+        </div>
+      </section>
 
       {/* Filtre Sekmeleri */}
       <div className="bg-white border-b">

@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { Phone, Instagram, Facebook, Linkedin } from 'lucide-react'
+import { Phone, Instagram } from 'lucide-react'
 
 interface TopBarProps {
   phone?: string
@@ -15,28 +15,12 @@ export function TopBar({ phone = '0545 727 72 97' }: TopBarProps) {
           {/* Social Links */}
           <div className="flex items-center gap-4">
             <a
-              href="https://instagram.com"
+              href="https://www.instagram.com/aklarinsaat.ordu/"
               target="_blank"
               rel="noopener noreferrer"
               className="text-gray-400 hover:text-[#CF000C] transition-colors"
             >
               <Instagram className="w-4 h-4" />
-            </a>
-            <a
-              href="https://facebook.com"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-gray-400 hover:text-[#CF000C] transition-colors"
-            >
-              <Facebook className="w-4 h-4" />
-            </a>
-            <a
-              href="https://linkedin.com"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-gray-400 hover:text-[#CF000C] transition-colors"
-            >
-              <Linkedin className="w-4 h-4" />
             </a>
           </div>
 

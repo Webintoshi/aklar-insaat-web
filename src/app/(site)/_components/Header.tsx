@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { Menu, X, Phone, ChevronDown, Instagram, Facebook, Linkedin, LayoutGrid } from 'lucide-react'
+import { Menu, X, Phone, ChevronDown, Instagram, LayoutGrid } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 
 const navLinks = [
@@ -45,14 +45,8 @@ export function Header({ phone = '0545 727 72 97' }: HeaderProps) {
           <div className="flex items-center justify-between h-full">
             {/* Sol: Sosyal Medya */}
             <div className="flex items-center gap-4">
-              <a href="https://instagram.com" target="_blank" rel="noopener noreferrer" className="text-gray-600 hover:text-[#CF000C] transition-colors">
+              <a href="https://www.instagram.com/aklarinsaat.ordu/" target="_blank" rel="noopener noreferrer" className="text-gray-600 hover:text-[#CF000C] transition-colors">
                 <Instagram className="w-4 h-4" />
-              </a>
-              <a href="https://facebook.com" target="_blank" rel="noopener noreferrer" className="text-gray-600 hover:text-[#CF000C] transition-colors">
-                <Facebook className="w-4 h-4" />
-              </a>
-              <a href="https://linkedin.com" target="_blank" rel="noopener noreferrer" className="text-gray-600 hover:text-[#CF000C] transition-colors">
-                <Linkedin className="w-4 h-4" />
               </a>
             </div>
 

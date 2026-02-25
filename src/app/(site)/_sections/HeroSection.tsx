@@ -1,8 +1,6 @@
 'use client'
 
-import { motion } from 'framer-motion'
 import Image from 'next/image'
-import Link from 'next/link'
 import { useCallback, useEffect, useState } from 'react'
 import useEmblaCarousel from 'embla-carousel-react'
 import Autoplay from 'embla-carousel-autoplay'
@@ -43,13 +41,6 @@ export function HeroSection({ data }: HeroSectionProps) {
     background_type,
     background_image,
     slider_images,
-    pre_title = 'SİZE ÖZEL DAİRELER',
-    title = 'Size Özel Yaşam',
-    highlight_word = 'MODERN YAŞAM',
-    badge_text = '3+1',
-    badge_subtext = 'DAİRELER',
-    cta_text = 'İNCELE',
-    cta_link = '/projeler',
     autoplay = true,
     autoplay_speed = 5000,
   } = data
@@ -96,70 +87,6 @@ export function HeroSection({ data }: HeroSectionProps) {
             sizes="100vw"
             quality={90}
           />
-          <div className="absolute inset-0 bg-gradient-to-l from-white/30 via-transparent to-transparent" />
-        </div>
-
-        {/* Content */}
-        <div className="relative z-10 h-full container mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="h-full flex items-center justify-end">
-            <motion.div
-              initial={{ opacity: 0, x: 50 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.8, delay: 0.3 }}
-              className="text-right max-w-xl mr-0 lg:mr-12"
-            >
-              <motion.p
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6, delay: 0.4 }}
-                className="text-gray-800 text-sm md:text-base font-medium tracking-[0.2em] mb-4"
-              >
-                {pre_title}
-              </motion.p>
-
-              <motion.h1
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6, delay: 0.5 }}
-                className="font-serif italic text-4xl md:text-6xl lg:text-7xl text-gray-800 mb-2"
-                style={{ fontFamily: 'Georgia, serif' }}
-              >
-                {title}
-              </motion.h1>
-
-              <motion.h2
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6, delay: 0.6 }}
-                className="text-2xl md:text-4xl lg:text-5xl font-bold text-gray-800 tracking-wide mb-8"
-              >
-                {highlight_word}
-              </motion.h2>
-
-              <motion.div
-                initial={{ opacity: 0, scale: 0.8 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 0.6, delay: 0.7 }}
-                className="inline-flex flex-col items-center justify-center w-32 h-32 md:w-40 md:h-40 bg-gradient-to-br from-[#CF000C] via-[#FF3333] to-[#990000] rounded-full shadow-2xl border-4 border-white/50 mb-8"
-              >
-                <span className="text-3xl md:text-4xl font-bold text-gray-900">{badge_text}</span>
-                <span className="text-sm md:text-base font-bold text-gray-900 uppercase tracking-wider">{badge_subtext}</span>
-              </motion.div>
-
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6, delay: 0.8 }}
-              >
-                <Link
-                  href={cta_link}
-                  className="inline-flex items-center justify-center px-10 py-3 bg-[#CF000C] text-white font-semibold text-lg rounded hover:bg-[#990000] transition-all duration-300 hover:shadow-lg hover:-translate-y-1"
-                >
-                  {cta_text}
-                </Link>
-              </motion.div>
-            </motion.div>
-          </div>
         </div>
       </section>
     )
@@ -199,46 +126,7 @@ export function HeroSection({ data }: HeroSectionProps) {
                 <div className="absolute inset-0 bg-gradient-to-l from-white/30 via-transparent to-transparent" />
               </div>
 
-              {/* Slide Content */}
-              <div className="relative z-10 h-full container mx-auto px-4 sm:px-6 lg:px-8">
-                <div className="h-full flex items-center justify-end">
-                  <motion.div
-                    initial={{ opacity: 0, x: 50 }}
-                    animate={{ opacity: selectedIndex === index ? 1 : 0, x: selectedIndex === index ? 0 : 50 }}
-                    transition={{ duration: 0.8 }}
-                    className="text-right max-w-xl mr-0 lg:mr-12"
-                  >
-                    <p className="text-gray-800 text-sm md:text-base font-medium tracking-[0.2em] mb-4">
-                      {slide.pre_title || pre_title}
-                    </p>
-
-                    <h1
-                      className="font-serif italic text-4xl md:text-6xl lg:text-7xl text-gray-800 mb-2"
-                      style={{ fontFamily: 'Georgia, serif' }}
-                    >
-                      {slide.title || title}
-                    </h1>
-
-                    <h2 className="text-2xl md:text-4xl lg:text-5xl font-bold text-gray-800 tracking-wide mb-8">
-                      {slide.highlight_word || highlight_word}
-                    </h2>
-
-                    <div className="inline-flex flex-col items-center justify-center w-32 h-32 md:w-40 md:h-40 bg-gradient-to-br from-[#D4AF37] via-[#F4D03F] to-[#B7950B] rounded-full shadow-2xl border-4 border-white/30 mb-8">
-                      <span className="text-3xl md:text-4xl font-bold text-gray-900">{slide.badge_text || badge_text}</span>
-                      <span className="text-sm md:text-base font-bold text-gray-900 uppercase tracking-wider">{slide.badge_subtext || badge_subtext}</span>
-                    </div>
-
-                    <div>
-                      <Link
-                        href={slide.cta_link || cta_link}
-                        className="inline-flex items-center justify-center px-10 py-3 bg-[#1E3A5F] text-white font-semibold text-lg rounded hover:bg-[#2E5A8F] transition-all duration-300 hover:shadow-lg hover:-translate-y-1"
-                      >
-                        {slide.cta_text || cta_text}
-                      </Link>
-                    </div>
-                  </motion.div>
-                </div>
-              </div>
+              {/* Slide Content - Removed text overlays, images only */}
             </div>
           ))}
         </div>

@@ -203,35 +203,6 @@ export default function KurumsalPage() {
         </div>
       </section>
 
-      {/* Why Choose Us / Highlight Section */}
-      <section className="py-16 lg:py-24 bg-[#1E3A5F]">
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8 xl:px-12">
-          <div className="max-w-4xl mx-auto text-center">
-            <h2 className="text-3xl lg:text-4xl font-bold text-white mb-6">
-              Neden Aklar İnşaat?
-            </h2>
-            <p className="text-lg text-white/80 leading-relaxed mb-10">
-              Hem ulaştığımız kitle hem de takım arkadaşlarımız arasında sinerji yaratabilmek için 
-              benimsediğimiz değerler; Müşterilerimizin kalite, fiyat, teslim süresi ve yüksek 
-              standartlardaki beklentilerini sorunsuz bir şekilde karşılamak.
-            </p>
-            <div className="flex flex-wrap justify-center gap-4">
-              <a 
-                href="/projeler" 
-                className="inline-flex items-center gap-2 px-8 py-4 bg-[#CF000C] text-white font-semibold rounded-lg hover:bg-[#a8000a] transition-colors"
-              >
-                Projelerimizi İnceleyin
-              </a>
-              <a 
-                href="/iletisim" 
-                className="inline-flex items-center gap-2 px-8 py-4 bg-white/10 text-white font-semibold rounded-lg hover:bg-white/20 transition-colors"
-              >
-                Bize Ulaşın
-              </a>
-            </div>
-          </div>
-        </div>
-      </section>
     </main>
   )
 }

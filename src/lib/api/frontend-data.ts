@@ -216,9 +216,7 @@ const defaultFooter: FooterSettings = {
   logo_url: null,
   description: 'Aklar İnşaat olarak, 2005 yılından bu yana kaliteli ve modern konut projeleri üretiyoruz. Müşteri memnuniyetini ön planda tutarak, her projemizde estetik ve fonksiyonelliği bir araya getiriyoruz.',
   social_links: [
-    { platform: 'facebook', url: 'https://facebook.com' },
-    { platform: 'instagram', url: 'https://instagram.com' },
-    { platform: 'linkedin', url: 'https://linkedin.com' },
+    { platform: 'instagram', url: 'https://www.instagram.com/aklarinsaat.ordu/' },
   ],
   quick_links: [
     { label: 'Ana Sayfa', url: '/' },
@@ -227,9 +225,9 @@ const defaultFooter: FooterSettings = {
     { label: 'İletişim', url: '/iletisim' },
   ],
   contact_info: {
-    address: 'İstanbul, Türkiye',
-    phone: '+90 212 123 45 67',
-    email: 'info@aklarinsaat.com',
+    address: 'ŞİRİNEVLER MAH ZÜBEYDE HANIM CAD NO:243/A Ordu/ALTINORDU',
+    phone: '0545 727 72 97',
+    email: 'aklarinsaat@outlook.com',
     working_hours: 'Pzt-Cum: 09:00 - 18:00',
   },
   copyright_text: '© 2024 Aklar İnşaat. Tüm hakları saklıdır.',

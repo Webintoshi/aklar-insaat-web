@@ -1,19 +1,17 @@
 'use client'
 
 import Link from 'next/link'
-import { MapPin, Phone, Mail, Clock, Facebook, Instagram, Linkedin, ArrowUpRight } from 'lucide-react'
+import { MapPin, Phone, Mail, Clock, Instagram, ArrowUpRight } from 'lucide-react'
 
 const socialIcons: Record<string, React.ReactNode> = {
-  facebook: <Facebook className="w-4 h-4" />,
-  instagram: <Instagram className="w-4 h-4" />,
-  linkedin: <Linkedin className="w-4 h-4" />,
+  instagram: <Instagram className="w-5 h-5" />,
 }
 
 interface FooterProps {
   data: {
     description: string
     social_links: {
-      platform: 'facebook' | 'instagram' | 'linkedin' | 'twitter' | 'youtube'
+      platform: 'instagram'
       url: string
     }[]
     quick_links: {
@@ -40,17 +38,27 @@ export function Footer({ data }: FooterProps) {
   const currentYear = new Date().getFullYear()
 
   return (
-    <footer className="bg-[#0a0f1a] text-white">
+    <footer className="relative text-white overflow-hidden">
+      {/* Background Image with Overlay */}
+      <div className="absolute inset-0">
+        <img
+          src="/images/about-building.jpg"
+          alt=""
+          className="w-full h-full object-cover"
+        />
+        <div className="absolute inset-0 bg-[#0a0f1a]/95" />
+      </div>
+
       {/* Top border */}
-      <div className="h-0.5 bg-[#CF000C]" />
-      
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8 xl:px-12 py-12 lg:py-16">
+      <div className="relative h-0.5 bg-[#CF000C]" />
+
+      <div className="relative container mx-auto px-4 sm:px-6 lg:px-8 xl:px-12 py-12 lg:py-16">
         {/* Main Grid - Balanced 4 columns */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-10 lg:gap-8">
           
           {/* Column 1: Brand */}
           <div className="lg:col-span-1">
-            {/* Logo - Optimized size */}
+            {/* Logo */}
             <img 
               src="/logoypng_48.png" 
               alt="Aklar İnşaat" 
@@ -63,7 +71,7 @@ export function Footer({ data }: FooterProps) {
 
             {/* Social Links */}
             {social_links && social_links.length > 0 && (
-              <div className="flex gap-2">
+              <div className="flex gap-3">
                 {social_links.map((link) => {
                   const Icon = socialIcons[link.platform]
                   return Icon ? (
@@ -72,7 +80,7 @@ export function Footer({ data }: FooterProps) {
                       href={link.url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="w-9 h-9 rounded-lg bg-white/5 flex items-center justify-center hover:bg-[#CF000C] transition-colors duration-200"
+                      className="w-10 h-10 rounded-lg bg-white/10 flex items-center justify-center hover:bg-[#CF000C] transition-colors duration-200"
                     >
                       {Icon}
                     </a>
@@ -84,7 +92,7 @@ export function Footer({ data }: FooterProps) {
 
           {/* Column 2: Quick Links */}
           <div>
-            <h4 className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-4">
+            <h4 className="text-xs font-bold uppercase tracking-wider text-gray-400 mb-4">
               Hızlı Linkler
             </h4>
             <ul className="space-y-3">
@@ -104,7 +112,7 @@ export function Footer({ data }: FooterProps) {
 
           {/* Column 3: Projects */}
           <div>
-            <h4 className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-4">
+            <h4 className="text-xs font-bold uppercase tracking-wider text-gray-400 mb-4">
               Projelerimiz
             </h4>
             <ul className="space-y-3">
@@ -140,16 +148,16 @@ export function Footer({ data }: FooterProps) {
 
           {/* Column 4: Contact */}
           <div>
-            <h4 className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-4">
+            <h4 className="text-xs font-bold uppercase tracking-wider text-gray-400 mb-4">
               İletişim
             </h4>
-            <ul className="space-y-3">
+            <ul className="space-y-4">
               <li>
                 <a 
                   href={`https://maps.google.com/?q=${encodeURIComponent(contact_info?.address || '')}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-start gap-2 text-gray-400 hover:text-white transition-colors text-sm"
+                  className="flex items-start gap-3 text-gray-400 hover:text-white transition-colors text-sm"
                 >
                   <MapPin className="w-4 h-4 text-[#CF000C] shrink-0 mt-0.5" />
                   <span className="leading-relaxed">{contact_info?.address}</span>
@@ -158,7 +166,7 @@ export function Footer({ data }: FooterProps) {
               <li>
                 <a 
                   href={`tel:${contact_info?.phone}`} 
-                  className="flex items-center gap-2 text-gray-400 hover:text-white transition-colors text-sm"
+                  className="flex items-center gap-3 text-gray-400 hover:text-white transition-colors text-sm"
                 >
                   <Phone className="w-4 h-4 text-[#CF000C] shrink-0" />
                   <span>{contact_info?.phone}</span>
@@ -167,13 +175,13 @@ export function Footer({ data }: FooterProps) {
               <li>
                 <a 
                   href={`mailto:${contact_info?.email}`} 
-                  className="flex items-center gap-2 text-gray-400 hover:text-white transition-colors text-sm"
+                  className="flex items-center gap-3 text-gray-400 hover:text-white transition-colors text-sm"
                 >
                   <Mail className="w-4 h-4 text-[#CF000C] shrink-0" />
                   <span>{contact_info?.email}</span>
                 </a>
               </li>
-              <li className="flex items-center gap-2 text-gray-400 text-sm">
+              <li className="flex items-center gap-3 text-gray-400 text-sm">
                 <Clock className="w-4 h-4 text-[#CF000C] shrink-0" />
                 <span>{contact_info?.working_hours}</span>
               </li>
