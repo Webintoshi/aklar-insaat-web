@@ -1,17 +1,21 @@
 'use client'
 
 import Link from 'next/link'
-import { MapPin, Phone, Mail, Clock, Instagram, ArrowUpRight } from 'lucide-react'
+import { MapPin, Phone, Mail, Clock, Instagram, Facebook, Twitter, Linkedin, Youtube, ArrowUpRight } from 'lucide-react'
 
 const socialIcons: Record<string, React.ReactNode> = {
   instagram: <Instagram className="w-5 h-5" />,
+  facebook: <Facebook className="w-5 h-5" />,
+  twitter: <Twitter className="w-5 h-5" />,
+  linkedin: <Linkedin className="w-5 h-5" />,
+  youtube: <Youtube className="w-5 h-5" />,
 }
 
 interface FooterProps {
   data: {
     description: string
     social_links: {
-      platform: 'instagram'
+      platform: 'instagram' | 'facebook' | 'twitter' | 'linkedin' | 'youtube'
       url: string
     }[]
     quick_links: {
