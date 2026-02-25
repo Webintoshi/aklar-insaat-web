@@ -204,7 +204,7 @@ export function InfoCardsSection({ data }: InfoCardsSectionProps) {
             <>
               <button
                 onClick={scrollPrev}
-                disabled={!canScrollPrev && !emblaApi?.options().loop}
+                disabled={!canScrollPrev}
                 className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-2 z-10 w-12 h-12 bg-white rounded-full shadow-lg flex items-center justify-center text-gray-600 hover:text-[#CF000C] hover:shadow-xl transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed hidden lg:flex"
                 aria-label="Önceki"
               >
@@ -212,7 +212,7 @@ export function InfoCardsSection({ data }: InfoCardsSectionProps) {
               </button>
               <button
                 onClick={scrollNext}
-                disabled={!canScrollNext && !emblaApi?.options().loop}
+                disabled={!canScrollNext}
                 className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-2 z-10 w-12 h-12 bg-white rounded-full shadow-lg flex items-center justify-center text-gray-600 hover:text-[#CF000C] hover:shadow-xl transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed hidden lg:flex"
                 aria-label="Sonraki"
               >
