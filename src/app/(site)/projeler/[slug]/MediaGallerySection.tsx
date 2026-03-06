@@ -67,74 +67,98 @@ export function MediaGallerySection({ title, projectName, imageType, images }: M
         <h3 className="mt-2 text-3xl font-semibold text-[#0F1D2F]">{title}</h3>
       </div>
 
-      {!isCarousel ? (
-        <div className="grid grid-cols-2 gap-5 md:grid-cols-3 xl:grid-cols-4">
-          {images.map((image, index) => (
-            <button
-              key={image.id}
-              type="button"
-              onClick={() => openLightbox(index)}
-              className="group overflow-hidden rounded-2xl bg-white shadow-lg text-left"
-            >
-              <div className="relative aspect-[3/4] w-full">
-                <Image
-                  src={image.url}
-                  alt={`${projectName} ${imageType} ${index + 1}`}
-                  fill
-                  loading="lazy"
-                  sizes="(max-width: 768px) 50vw, (max-width: 1280px) 33vw, 25vw"
-                  className="object-cover transition duration-500 group-hover:scale-105"
-                />
-              </div>
-            </button>
-          ))}
-        </div>
-      ) : (
-        <div className="relative">
-          <div className="overflow-hidden" ref={emblaRef}>
-            <div className="flex gap-5">
-              {images.map((image, index) => (
-                <button
-                  key={image.id}
-                  type="button"
-                  onClick={() => openLightbox(index)}
-                  className="min-w-0 flex-[0_0_78%] sm:flex-[0_0_48%] lg:flex-[0_0_31%] xl:flex-[0_0_24%] group overflow-hidden rounded-2xl bg-white shadow-lg text-left"
-                >
-                  <div className="relative aspect-[3/4] w-full">
-                    <Image
-                      src={image.url}
-                      alt={`${projectName} ${imageType} ${index + 1}`}
-                      fill
-                      loading="lazy"
-                      sizes="(max-width: 640px) 78vw, (max-width: 1024px) 48vw, (max-width: 1280px) 31vw, 24vw"
-                      className="object-cover transition duration-500 group-hover:scale-105"
-                    />
-                  </div>
-                </button>
-              ))}
+      <div className="grid grid-cols-2 gap-4 md:hidden">
+        {images.map((image, index) => (
+          <button
+            key={image.id}
+            type="button"
+            onClick={() => openLightbox(index)}
+            className="group overflow-hidden rounded-2xl bg-white shadow-lg text-left"
+          >
+            <div className="relative aspect-[3/4] w-full">
+              <Image
+                src={image.url}
+                alt={`${projectName} ${imageType} ${index + 1}`}
+                fill
+                loading="lazy"
+                sizes="50vw"
+                className="object-cover transition duration-500 group-hover:scale-105"
+              />
             </div>
-          </div>
+          </button>
+        ))}
+      </div>
 
-          <button
-            type="button"
-            onClick={() => emblaApi?.scrollPrev()}
-            disabled={!emblaApi?.canScrollPrev()}
-            className="absolute -left-3 top-1/2 hidden h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full border border-white/70 bg-white/95 text-[#1E3A5F] shadow-lg transition hover:text-[#CF000C] disabled:cursor-not-allowed disabled:opacity-40 lg:flex"
-            aria-label="Önceki"
-          >
-            <ChevronLeft className="h-5 w-5" />
-          </button>
-          <button
-            type="button"
-            onClick={() => emblaApi?.scrollNext()}
-            disabled={!emblaApi?.canScrollNext()}
-            className="absolute -right-3 top-1/2 hidden h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full border border-white/70 bg-white/95 text-[#1E3A5F] shadow-lg transition hover:text-[#CF000C] disabled:cursor-not-allowed disabled:opacity-40 lg:flex"
-            aria-label="Sonraki"
-          >
-            <ChevronRight className="h-5 w-5" />
-          </button>
-        </div>
-      )}
+      <div className="hidden md:block">
+        {!isCarousel ? (
+          <div className="grid grid-cols-2 gap-5 md:grid-cols-3 xl:grid-cols-4">
+            {images.map((image, index) => (
+              <button
+                key={image.id}
+                type="button"
+                onClick={() => openLightbox(index)}
+                className="group overflow-hidden rounded-2xl bg-white shadow-lg text-left"
+              >
+                <div className="relative aspect-[3/4] w-full">
+                  <Image
+                    src={image.url}
+                    alt={`${projectName} ${imageType} ${index + 1}`}
+                    fill
+                    loading="lazy"
+                    sizes="(max-width: 1280px) 33vw, 25vw"
+                    className="object-cover transition duration-500 group-hover:scale-105"
+                  />
+                </div>
+              </button>
+            ))}
+          </div>
+        ) : (
+          <div className="relative">
+            <div className="overflow-hidden" ref={emblaRef}>
+              <div className="flex gap-5">
+                {images.map((image, index) => (
+                  <button
+                    key={image.id}
+                    type="button"
+                    onClick={() => openLightbox(index)}
+                    className="min-w-0 flex-[0_0_48%] lg:flex-[0_0_31%] xl:flex-[0_0_24%] group overflow-hidden rounded-2xl bg-white shadow-lg text-left"
+                  >
+                    <div className="relative aspect-[3/4] w-full">
+                      <Image
+                        src={image.url}
+                        alt={`${projectName} ${imageType} ${index + 1}`}
+                        fill
+                        loading="lazy"
+                        sizes="(max-width: 1024px) 48vw, (max-width: 1280px) 31vw, 24vw"
+                        className="object-cover transition duration-500 group-hover:scale-105"
+                      />
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => emblaApi?.scrollPrev()}
+              disabled={!emblaApi?.canScrollPrev()}
+              className="absolute -left-3 top-1/2 hidden h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full border border-white/70 bg-white/95 text-[#1E3A5F] shadow-lg transition hover:text-[#CF000C] disabled:cursor-not-allowed disabled:opacity-40 lg:flex"
+              aria-label="Önceki"
+            >
+              <ChevronLeft className="h-5 w-5" />
+            </button>
+            <button
+              type="button"
+              onClick={() => emblaApi?.scrollNext()}
+              disabled={!emblaApi?.canScrollNext()}
+              className="absolute -right-3 top-1/2 hidden h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full border border-white/70 bg-white/95 text-[#1E3A5F] shadow-lg transition hover:text-[#CF000C] disabled:cursor-not-allowed disabled:opacity-40 lg:flex"
+              aria-label="Sonraki"
+            >
+              <ChevronRight className="h-5 w-5" />
+            </button>
+          </div>
+        )}
+      </div>
 
       {lightboxIndex !== null ? (
         <div
