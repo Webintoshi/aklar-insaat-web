@@ -14,7 +14,7 @@ export default async function HomePage() {
   return (
     <>
       <Header />
-      <main>
+      <main className="pt-[120px]">
         <HeroSection data={data.hero} />
         <AboutSection data={data.about} />
         <ProjectsSection projects={data.projects} />
