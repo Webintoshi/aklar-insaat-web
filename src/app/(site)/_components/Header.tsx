@@ -2,7 +2,7 @@
 
 import Image from 'next/image'
 import Link from 'next/link'
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { Menu, X, Phone, ChevronDown, Instagram, LayoutGrid } from 'lucide-react'
 import { AnimatePresence, motion } from 'framer-motion'
 
@@ -26,25 +26,13 @@ interface HeaderProps {
 }
 
 export function Header({ phone = '0545 727 72 97' }: HeaderProps) {
-  const [isScrolled, setIsScrolled] = useState(false)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [openDropdown, setOpenDropdown] = useState<string | null>(null)
-
-  useEffect(() => {
-    const handleScroll = () => {
-      setIsScrolled(window.scrollY > 50)
-    }
-
-    window.addEventListener('scroll', handleScroll)
-    return () => window.removeEventListener('scroll', handleScroll)
-  }, [])
 
   return (
     <>
       <div
-        className={`fixed top-0 left-0 right-0 z-50 bg-gray-100 border-b border-gray-200 transition-all duration-300 ${
-          isScrolled ? 'h-0 opacity-0 overflow-hidden' : 'h-10 opacity-100'
-        }`}
+        className="fixed top-0 left-0 right-0 z-50 h-10 bg-gray-100 border-b border-gray-200"
       >
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 xl:px-12 h-full">
           <div className="flex items-center justify-between h-full">
@@ -70,16 +58,9 @@ export function Header({ phone = '0545 727 72 97' }: HeaderProps) {
         </div>
       </div>
 
-      <motion.header
-        initial={{ y: -100 }}
-        animate={{ y: 0 }}
-        transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
-        className={`fixed left-0 right-0 z-50 transition-all duration-300 ${
-          isScrolled ? 'top-0 bg-white/95 backdrop-blur-md shadow-lg' : 'top-10 bg-white'
-        }`}
-      >
+      <header className="fixed left-0 right-0 top-10 z-50 bg-white shadow-sm">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-          <div className={`flex items-center justify-between transition-all duration-300 ${isScrolled ? 'h-16' : 'h-20'}`}>
+          <div className="flex h-20 items-center justify-between">
             <Link href="/" className="flex items-center">
               <Image
                 src="/logoypng_48.png"
@@ -88,9 +69,7 @@ export function Header({ phone = '0545 727 72 97' }: HeaderProps) {
                 height={86}
                 priority
                 sizes="(max-width: 640px) 220px, 360px"
-                className={`h-auto w-auto max-w-[220px] object-contain transition-all duration-300 sm:max-w-[260px] md:max-w-[300px] ${
-                  isScrolled ? 'max-h-8 sm:max-h-9' : 'max-h-10 sm:max-h-12'
-                }`}
+                className="h-auto w-auto max-h-10 max-w-[220px] object-contain sm:max-h-12 sm:max-w-[260px] md:max-w-[300px]"
               />
             </Link>
 
@@ -152,7 +131,7 @@ export function Header({ phone = '0545 727 72 97' }: HeaderProps) {
             </div>
           </div>
         </div>
-      </motion.header>
+      </header>
 
       <AnimatePresence>
         {isMobileMenuOpen && (
