@@ -158,17 +158,17 @@ export default async function ProjeDetayPage({ params }: { params: Promise<Route
         <section className="grid gap-8 lg:grid-cols-12">
           <div className="lg:col-span-7 overflow-hidden rounded-3xl bg-white shadow-xl">
             {aboutImage ? (
-              <div className="relative aspect-[3/4] w-full sm:aspect-[4/5] lg:h-full lg:min-h-[300px] lg:aspect-auto">
+              <div className="relative aspect-[3/4] w-full sm:aspect-[4/5] lg:aspect-[4/3] lg:min-h-[430px]">
                 <Image
                   src={aboutImage}
                   alt={projectName}
                   fill
-                  className="object-cover object-top"
+                  className="object-cover object-center"
                   sizes="(max-width: 640px) 100vw, (max-width: 1024px) 90vw, 58vw"
                 />
               </div>
             ) : (
-              <div className="flex aspect-[3/4] min-h-[300px] items-center justify-center bg-gray-100 text-gray-300 sm:aspect-[4/5] lg:h-full lg:min-h-[300px] lg:aspect-auto">
+              <div className="flex aspect-[3/4] min-h-[300px] items-center justify-center bg-gray-100 text-gray-300 sm:aspect-[4/5] lg:aspect-[4/3] lg:min-h-[430px]">
                 <Building2 className="h-16 w-16" />
               </div>
             )}
