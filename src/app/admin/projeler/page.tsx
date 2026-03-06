@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { createClient } from '@/lib/supabase/client'
 import { 
   Plus, 
   Edit2, 
@@ -29,11 +28,10 @@ interface Project {
 export default function ProjelerAdminPage() {
   const [projects, setProjects] = useState<Project[]>([])
   const [loading, setLoading] = useState(true)
+  const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
   const [filterStatus, setFilterStatus] = useState<string>('all')
   const [filterProjectStatus, setFilterProjectStatus] = useState<string>('all')
-  const supabase = createClient()
-
   useEffect(() => {
     loadProjects()
   }, [])
@@ -41,11 +39,13 @@ export default function ProjelerAdminPage() {
   const loadProjects = async () => {
     try {
       const res = await fetch('/api/projects')
-      if (!res.ok) throw new Error('Failed to fetch')
       const data = await res.json()
+      if (!res.ok) throw new Error(data?.error || `Hata: ${res.status}`)
       setProjects(data || [])
+      setErrorMessage(null)
     } catch (error) {
       console.error('Error loading projects:', error)
+      setErrorMessage(error instanceof Error ? error.message : 'Projeler yuklenemedi')
     } finally {
       setLoading(false)
     }
@@ -66,23 +66,11 @@ export default function ProjelerAdminPage() {
     }
   }
 
-  const handleToggleFeatured = async (id: string, current: boolean) => {
-    try {
-      const res = await fetch(`/api/projects/${id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ is_featured: !current })
-      })
-      if (!res.ok) throw new Error('Failed to update')
-      loadProjects()
-    } catch (error) {
-      console.error('Update error:', error)
-    }
-  }
-
   const filteredProjects = projects.filter(project => {
-    const matchesSearch = project.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         project.slug.toLowerCase().includes(searchTerm.toLowerCase())
+    const name = (project.name || '').toLowerCase()
+    const slug = (project.slug || '').toLowerCase()
+    const term = searchTerm.toLowerCase()
+    const matchesSearch = name.includes(term) || slug.includes(term)
     const matchesStatus = filterStatus === 'all' || project.status === filterStatus
     const matchesProjectStatus = filterProjectStatus === 'all' || project.project_status === filterProjectStatus
     return matchesSearch && matchesStatus && matchesProjectStatus
@@ -135,6 +123,12 @@ export default function ProjelerAdminPage() {
           Yeni Proje
         </Link>
       </div>
+
+      {errorMessage && (
+        <div className="mb-6 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          {errorMessage}
+        </div>
+      )}
 
       {/* Filtreler */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 mb-6">

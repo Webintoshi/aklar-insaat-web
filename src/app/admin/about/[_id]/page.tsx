@@ -1,10 +1,11 @@
-'use client'
+﻿'use client'
 
-import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, useEffect, useCallback } from 'react'
+import { useParams, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { ArrowLeft, Loader2, Save, Plus, Trash2 } from 'lucide-react'
+import { ArrowLeft, Loader2, Save, Plus, Trash2, Upload, Image as ImageIcon } from 'lucide-react'
 import Link from 'next/link'
+import Image from 'next/image'
 
 interface AboutSection {
   id: string
@@ -31,16 +32,20 @@ interface AboutSection {
 
 const iconOptions = [
   'Shield', 'Award', 'Clock', 'Heart', 'Home', 'Building', 'Users', 'Star',
-  'CheckCircle', 'TrendingUp', 'MapPin', 'Phone', 'Mail', 'Calendar'
+  'CheckCircle', 'TrendingUp', 'MapPin', 'Phone', 'Mail', 'Calendar',
 ]
 
-export default function AboutEditorPage({ params }: { params: { _id: string } }) {
+export default function AboutEditorPage() {
   const router = useRouter()
+  const params = useParams<{ _id: string }>()
+  const aboutId = params?._id
   const supabase = createClient()
-  const isNew = params._id === 'new'
-  
+  const isNew = aboutId === 'new'
+
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [uploadingImage, setUploadingImage] = useState(false)
+  const [uploadError, setUploadError] = useState<string | null>(null)
   const [data, setData] = useState<Partial<AboutSection>>({
     name: 'Hakkımızda',
     is_active: true,
@@ -56,20 +61,16 @@ export default function AboutEditorPage({ params }: { params: { _id: string } })
     cta_link: '/kurumsal',
   })
 
-  useEffect(() => {
-    if (!isNew) {
-      fetchAbout()
-    }
-  }, [isNew])
-
-  const fetchAbout = async () => {
+  const fetchAbout = useCallback(async () => {
+    if (!aboutId) return
     setLoading(true)
+
     const { data: about } = await supabase
       .from('about_sections')
       .select('*')
-      .eq('id', params._id)
+      .eq('id', aboutId)
       .single()
-    
+
     if (about) {
       setData({
         ...about,
@@ -77,7 +78,50 @@ export default function AboutEditorPage({ params }: { params: { _id: string } })
         experience_badge: about.experience_badge || { years: 15, text: 'Yıllık Tecrübe' },
       })
     }
+
     setLoading(false)
+  }, [aboutId, supabase])
+
+  useEffect(() => {
+    if (!aboutId) return
+    if (!isNew) {
+      fetchAbout()
+    }
+  }, [aboutId, isNew, fetchAbout])
+
+  const handleImageUpload = async (file: File) => {
+    setUploadingImage(true)
+    setUploadError(null)
+
+    try {
+      if (!file.type.startsWith('image/')) {
+        throw new Error('Sadece görsel dosyaları yükleyebilirsiniz')
+      }
+      if (file.size > 10 * 1024 * 1024) {
+        throw new Error('Görsel en fazla 10MB olabilir')
+      }
+
+      const formData = new FormData()
+      formData.append('file', file)
+      formData.append('folder', 'about')
+
+      const res = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData,
+      })
+
+      const result = await res.json()
+      if (!res.ok) {
+        throw new Error(result?.error || 'Yükleme başarısız')
+      }
+
+      setData((prev) => ({ ...prev, image_url: result.url }))
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : 'Yükleme sırasında hata oluştu'
+      setUploadError(msg)
+    } finally {
+      setUploadingImage(false)
+    }
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -86,17 +130,37 @@ export default function AboutEditorPage({ params }: { params: { _id: string } })
 
     const payload = {
       ...data,
-      features: data.features?.filter(f => f.title) || [],
+      features: data.features?.filter((f) => f.title) || [],
     }
 
     if (isNew) {
-      const { error } = await supabase.from('about_sections').insert(payload)
-      if (!error) router.push('/admin/about')
+      const { data: inserted, error } = await supabase
+        .from('about_sections')
+        .insert(payload)
+        .select('id')
+        .single()
+      if (!error && inserted?.id) {
+        if (payload.is_active) {
+          await supabase
+            .from('about_sections')
+            .update({ is_active: false })
+            .neq('id', inserted.id)
+        }
+        router.push('/admin/about')
+      }
     } else {
-      const { error } = await supabase.from('about_sections').update(payload).eq('id', params._id)
-      if (!error) router.push('/admin/about')
+      const { error } = await supabase.from('about_sections').update(payload).eq('id', aboutId)
+      if (!error) {
+        if (payload.is_active && aboutId) {
+          await supabase
+            .from('about_sections')
+            .update({ is_active: false })
+            .neq('id', aboutId)
+        }
+        router.push('/admin/about')
+      }
     }
-    
+
     setSaving(false)
   }
 
@@ -115,9 +179,9 @@ export default function AboutEditorPage({ params }: { params: { _id: string } })
   }
 
   const updateFeature = (index: number, field: 'icon' | 'title' | 'description', value: string) => {
-    const newFeatures = [...(data.features || [])]
-    newFeatures[index] = { ...newFeatures[index], [field]: value }
-    setData({ ...data, features: newFeatures })
+    const nextFeatures = [...(data.features || [])]
+    nextFeatures[index] = { ...nextFeatures[index], [field]: value }
+    setData({ ...data, features: nextFeatures })
   }
 
   if (loading) {
@@ -142,7 +206,6 @@ export default function AboutEditorPage({ params }: { params: { _id: string } })
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
-        {/* Temel Bilgiler */}
         <div className="bg-white rounded-xl shadow-sm p-6">
           <h2 className="text-lg font-semibold text-gray-800 mb-4">Temel Bilgiler</h2>
           <div className="grid md:grid-cols-2 gap-4">
@@ -150,7 +213,7 @@ export default function AboutEditorPage({ params }: { params: { _id: string } })
               <label className="block text-sm font-medium text-gray-700 mb-2">Bölüm Adı</label>
               <input
                 type="text"
-                value={data.name}
+                value={data.name || ''}
                 onChange={(e) => setData({ ...data, name: e.target.value })}
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
                 required
@@ -170,43 +233,105 @@ export default function AboutEditorPage({ params }: { params: { _id: string } })
           </div>
         </div>
 
-        {/* Görsel */}
         <div className="bg-white rounded-xl shadow-sm p-6">
           <h2 className="text-lg font-semibold text-gray-800 mb-4">Görsel</h2>
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Görsel URL</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Bilgisayardan Yükle</label>
+              <div className="flex items-center gap-4">
+                <label className="inline-flex cursor-pointer items-center rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
+                  {uploadingImage ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Yükleniyor...
+                    </>
+                  ) : (
+                    <>
+                      <Upload className="mr-2 h-4 w-4" />
+                      Görsel Seç
+                    </>
+                  )}
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    disabled={uploadingImage}
+                    onChange={(e) => {
+                      const file = e.target.files?.[0]
+                      if (file) handleImageUpload(file)
+                      e.currentTarget.value = ''
+                    }}
+                  />
+                </label>
+
+                {data.image_url ? (
+                  <button
+                    type="button"
+                    className="text-sm text-red-600 hover:underline"
+                    onClick={() => setData({ ...data, image_url: '' })}
+                  >
+                    Görseli kaldır
+                  </button>
+                ) : null}
+              </div>
+              {uploadError ? <p className="mt-2 text-sm text-red-600">{uploadError}</p> : null}
+            </div>
+
+            {data.image_url ? (
+              <div className="overflow-hidden rounded-lg border border-gray-200 bg-gray-50">
+                <div className="relative h-56 w-full">
+                  <Image
+                    src={data.image_url}
+                    alt={data.image_caption || 'Onizleme'}
+                    fill
+                    sizes="(max-width: 768px) 100vw, 768px"
+                    className="object-cover"
+                  />
+                </div>
+              </div>
+            ) : (
+              <div className="flex h-40 items-center justify-center rounded-lg border border-dashed border-gray-300 text-gray-400">
+                <ImageIcon className="mr-2 h-5 w-5" />
+                Görsel seçilmedi
+              </div>
+            )}
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Görsel URL (opsiyonel)</label>
               <input
                 type="text"
-                value={data.image_url}
+                value={data.image_url || ''}
                 onChange={(e) => setData({ ...data, image_url: e.target.value })}
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
                 placeholder="https://..."
-                required
               />
             </div>
+
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Görsel Alt Yazısı</label>
               <input
                 type="text"
-                value={data.image_caption}
+                value={data.image_caption || ''}
                 onChange={(e) => setData({ ...data, image_caption: e.target.value })}
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
               />
             </div>
+
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Deneyim Yılı</label>
                 <input
                   type="number"
                   value={data.experience_badge?.years || 0}
-                  onChange={(e) => setData({ 
-                    ...data, 
-                    experience_badge: { 
-                      years: parseInt(e.target.value) || 0, 
-                      text: data.experience_badge?.text || '' 
-                    } 
-                  })}
+                  onChange={(e) =>
+                    setData({
+                      ...data,
+                      experience_badge: {
+                        years: parseInt(e.target.value, 10) || 0,
+                        text: data.experience_badge?.text || '',
+                      },
+                    })
+                  }
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
                 />
               </div>
@@ -215,13 +340,15 @@ export default function AboutEditorPage({ params }: { params: { _id: string } })
                 <input
                   type="text"
                   value={data.experience_badge?.text || ''}
-                  onChange={(e) => setData({ 
-                    ...data, 
-                    experience_badge: { 
-                      years: data.experience_badge?.years || 0, 
-                      text: e.target.value 
-                    } 
-                  })}
+                  onChange={(e) =>
+                    setData({
+                      ...data,
+                      experience_badge: {
+                        years: data.experience_badge?.years || 0,
+                        text: e.target.value,
+                      },
+                    })
+                  }
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
                   placeholder="Yıllık Tecrübe"
                 />
@@ -230,7 +357,6 @@ export default function AboutEditorPage({ params }: { params: { _id: string } })
           </div>
         </div>
 
-        {/* İçerik */}
         <div className="bg-white rounded-xl shadow-sm p-6">
           <h2 className="text-lg font-semibold text-gray-800 mb-4">İçerik</h2>
           <div className="space-y-4">
@@ -238,7 +364,7 @@ export default function AboutEditorPage({ params }: { params: { _id: string } })
               <label className="block text-sm font-medium text-gray-700 mb-2">Pre-title</label>
               <input
                 type="text"
-                value={data.pre_title}
+                value={data.pre_title || ''}
                 onChange={(e) => setData({ ...data, pre_title: e.target.value })}
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
                 placeholder="Bizi Tanıyın"
@@ -248,7 +374,7 @@ export default function AboutEditorPage({ params }: { params: { _id: string } })
               <label className="block text-sm font-medium text-gray-700 mb-2">Başlık</label>
               <input
                 type="text"
-                value={data.title}
+                value={data.title || ''}
                 onChange={(e) => setData({ ...data, title: e.target.value })}
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
                 placeholder="Aklar İnşaat"
@@ -259,7 +385,7 @@ export default function AboutEditorPage({ params }: { params: { _id: string } })
               <label className="block text-sm font-medium text-gray-700 mb-2">Vurgulanacak Kelime</label>
               <input
                 type="text"
-                value={data.highlight_word}
+                value={data.highlight_word || ''}
                 onChange={(e) => setData({ ...data, highlight_word: e.target.value })}
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
                 placeholder="Güven"
@@ -268,7 +394,7 @@ export default function AboutEditorPage({ params }: { params: { _id: string } })
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Açıklama</label>
               <textarea
-                value={data.description}
+                value={data.description || ''}
                 onChange={(e) => setData({ ...data, description: e.target.value })}
                 rows={5}
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none resize-y"
@@ -279,7 +405,6 @@ export default function AboutEditorPage({ params }: { params: { _id: string } })
           </div>
         </div>
 
-        {/* Özellikler */}
         <div className="bg-white rounded-xl shadow-sm p-6">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-semibold text-gray-800">Özellikler</h2>
@@ -301,7 +426,7 @@ export default function AboutEditorPage({ params }: { params: { _id: string } })
                     onChange={(e) => updateFeature(index, 'icon', e.target.value)}
                     className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
                   >
-                    {iconOptions.map(icon => (
+                    {iconOptions.map((icon) => (
                       <option key={icon} value={icon}>{icon}</option>
                     ))}
                   </select>
@@ -329,26 +454,25 @@ export default function AboutEditorPage({ params }: { params: { _id: string } })
                 />
               </div>
             ))}
-            {data.features?.length === 0 && (
+            {data.features?.length === 0 ? (
               <p className="text-gray-500 text-center py-4">Henüz özellik eklenmemiş</p>
-            )}
+            ) : null}
           </div>
         </div>
 
-        {/* CTA */}
         <div className="bg-white rounded-xl shadow-sm p-6">
           <h2 className="text-lg font-semibold text-gray-800 mb-4">CTA Butonu</h2>
           <div className="grid md:grid-cols-2 gap-4">
             <input
               type="text"
-              value={data.cta_text}
+              value={data.cta_text || ''}
               onChange={(e) => setData({ ...data, cta_text: e.target.value })}
               className="px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
               placeholder="Buton metni"
             />
             <input
               type="text"
-              value={data.cta_link}
+              value={data.cta_link || ''}
               onChange={(e) => setData({ ...data, cta_link: e.target.value })}
               className="px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
               placeholder="Link"
@@ -356,7 +480,6 @@ export default function AboutEditorPage({ params }: { params: { _id: string } })
           </div>
         </div>
 
-        {/* Kaydet */}
         <div className="flex justify-end">
           <button
             type="submit"
@@ -380,3 +503,4 @@ export default function AboutEditorPage({ params }: { params: { _id: string } })
     </div>
   )
 }
+

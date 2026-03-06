@@ -97,8 +97,10 @@ export interface Project {
   id: string
   slug: string
   title: string
+  name?: string | null
   description: string | null
   status: 'completed' | 'ongoing'
+  project_status?: 'completed' | 'ongoing' | null
   location: string | null
   completion_date: string | null
   featured_image: string | null
@@ -327,35 +329,111 @@ export async function getAboutSection(): Promise<AboutSection> {
     .from('about_sections')
     .select('*')
     .eq('is_active', true)
+    .order('updated_at', { ascending: false })
+    .order('created_at', { ascending: false })
     .limit(1)
-    .single()
-  
-  return data || defaultAbout
+    .maybeSingle()
+
+  if (!data) return defaultAbout
+
+  const parsedParagraphs = Array.isArray((data as { paragraphs?: unknown }).paragraphs)
+    ? ((data as { paragraphs?: unknown[] }).paragraphs
+      .filter((p): p is string => typeof p === 'string')
+      .map((p) => p.trim())
+      .filter(Boolean))
+    : []
+
+  const descriptionText = (data as { description?: string | null }).description?.trim()
+
+  return {
+    ...defaultAbout,
+    ...data,
+    image_url: (data as { image_url?: string | null }).image_url || defaultAbout.image_url,
+    subtitle: (data as { subtitle?: string | null; pre_title?: string | null }).subtitle
+      || (data as { pre_title?: string | null }).pre_title
+      || defaultAbout.subtitle,
+    paragraphs: parsedParagraphs.length > 0
+      ? parsedParagraphs
+      : descriptionText
+        ? [descriptionText]
+        : defaultAbout.paragraphs,
+    highlight_text: (data as { highlight_text?: string | null }).highlight_text
+      || (data as { highlight_word?: string | null }).highlight_word
+      || defaultAbout.highlight_text,
+    experience_badge: (data as { experience_badge?: { years?: number; text?: string } | null }).experience_badge?.years
+      ? {
+          years: (data as { experience_badge?: { years: number; text?: string } }).experience_badge!.years,
+          text: (data as { experience_badge?: { text?: string } }).experience_badge?.text || defaultAbout.experience_badge.text,
+        }
+      : defaultAbout.experience_badge,
+  }
 }
 
 export async function getProjects(options?: { status?: 'completed' | 'ongoing'; featured?: boolean; limit?: number }): Promise<Project[]> {
   const supabase = await createClient()
-  
+
   let query = supabase
     .from('projects')
-    .select(`*, images:project_images(*)`)
-    .eq('is_published', true)
-    .order('order_index', { ascending: true })
-  
-  if (options?.status) query = query.eq('status', options.status)
+    .select('*')
+    .or('is_published.eq.true,status.eq.published')
+    .order('sort_order', { ascending: true })
+    .order('created_at', { ascending: false })
+
+  if (options?.status) query = query.eq('project_status', options.status)
   if (options?.featured) query = query.eq('is_featured', true)
   if (options?.limit) query = query.limit(options.limit)
-  
-  const { data } = await query
-  
-  if (!data || data.length === 0) {
-    return defaultProjects
-  }
-  
-  return data.map((p: any) => ({
-    ...p,
-    features: p.features || [],
-  }))
+
+  const { data: projectRows, error: projectsError } = await query
+  if (projectsError || !projectRows || projectRows.length === 0) return []
+
+  const projectIds = projectRows.map((p) => p.id).filter(Boolean)
+
+  const { data: mediaRows } = projectIds.length
+    ? await supabase
+        .from('project_media')
+        .select('project_id, category, url, sort_order')
+        .in('project_id', projectIds)
+        .order('sort_order', { ascending: true })
+    : { data: [] as Array<{ project_id: string; category: string | null; url: string | null; sort_order?: number | null }> }
+
+  const { data: imageRows } = projectIds.length
+    ? await supabase
+        .from('project_images')
+        .select('project_id, image_type, image_url, order_index')
+        .in('project_id', projectIds)
+        .order('order_index', { ascending: true })
+    : { data: [] as Array<{ project_id: string; image_type: string | null; image_url: string | null; order_index?: number | null }> }
+
+  return projectRows.map((p) => {
+    const media = (mediaRows || []).filter((m) => m.project_id === p.id)
+    const images = (imageRows || []).filter((img) => img.project_id === p.id)
+
+    let featuredImage =
+      (p as { featured_image?: string | null; about_image_url?: string | null }).featured_image ||
+      (p as { about_image_url?: string | null }).about_image_url ||
+      null
+
+    if (!featuredImage && media.length > 0) {
+      const aboutMedia = media.find((m) => m.category === 'about')
+      const exteriorMedia = media.find((m) => m.category === 'exterior')
+      featuredImage = aboutMedia?.url || exteriorMedia?.url || media[0]?.url || null
+    }
+
+    if (!featuredImage && images.length > 0) {
+      const exteriorImage = images.find((img) => img.image_type === 'exterior')
+      featuredImage = exteriorImage?.image_url || images[0]?.image_url || null
+    }
+
+    return {
+      ...p,
+      title: p.title || p.name || 'Proje',
+      name: p.name || p.title || 'Proje',
+      status: (p.project_status || (p.status === 'completed' || p.status === 'ongoing' ? p.status : 'ongoing')) as 'completed' | 'ongoing',
+      project_status: (p.project_status || null) as 'completed' | 'ongoing' | null,
+      featured_image: featuredImage || null,
+      features: p.features || [],
+    }
+  })
 }
 
 export async function getProjectBySlug(slug: string): Promise<Project | null> {
@@ -433,13 +511,15 @@ export interface HomePageData {
 }
 
 export async function getHomePageData(): Promise<HomePageData> {
-  const [hero, about, projects, video, infoCards] = await Promise.all([
+  const [hero, about, featuredProjects, video, infoCards] = await Promise.all([
     getHeroSection(),
     getAboutSection(),
     getProjects({ featured: true, limit: 6 }),
     getVideoSection(),
     getInfoCardsSection(),
   ])
-  
+
+  const projects = featuredProjects.length > 0 ? featuredProjects : await getProjects({ limit: 8 })
+
   return { hero, about, projects, video, infoCards }
 }

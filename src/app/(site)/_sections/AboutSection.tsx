@@ -30,6 +30,7 @@ export function AboutSection({ data }: AboutSectionProps) {
     paragraphs,
     highlight_text,
   } = data
+  const hasImage = Boolean(image_url && image_url.trim().length > 0)
 
   return (
     <section ref={ref} className="py-24 lg:py-32 bg-white">
@@ -43,14 +44,18 @@ export function AboutSection({ data }: AboutSectionProps) {
             className="relative h-[500px] lg:h-[700px]"
           >
             <div className="absolute inset-0 overflow-hidden">
-              <Image
-                src={image_url}
-                alt={image_caption || 'Aklar İnşaat'}
-                fill
-                className="object-cover"
-                sizes="(max-width: 1024px) 100vw, 50vw"
-                priority
-              />
+              {hasImage ? (
+                <Image
+                  src={image_url}
+                  alt={image_caption || 'Aklar İnşaat'}
+                  fill
+                  className="object-cover"
+                  sizes="(max-width: 1024px) 100vw, 50vw"
+                  priority
+                />
+              ) : (
+                <div className="h-full w-full bg-gradient-to-br from-[#0F1D2F] via-[#1E3A5F] to-[#2E5A8F]" />
+              )}
             </div>
 
             {/* Experience Badge - Bottom left */}

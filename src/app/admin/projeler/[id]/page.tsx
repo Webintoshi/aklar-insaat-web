@@ -1,9 +1,8 @@
-'use client'
+﻿'use client'
 
-import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, useEffect, useCallback } from 'react'
+import { useParams } from 'next/navigation'
 import Link from 'next/link'
-import { createClient } from '@/lib/supabase/client'
 import { 
   ArrowLeft, 
   Save, 
@@ -20,6 +19,7 @@ interface Project {
   name: string
   slug: string
   status: 'draft' | 'published' | 'archived'
+  project_status: 'completed' | 'ongoing'
   is_featured: boolean
   about_text: string
   about_image_url: string | null
@@ -40,115 +40,170 @@ interface Media {
   sort_order: number
 }
 
-export default function ProjeDuzenlePage({ params }: { params: { id: string } }) {
-  const router = useRouter()
+type MediaCategory = 'about' | 'exterior' | 'interior' | 'location'
+
+export default function ProjeDuzenlePage() {
+  const params = useParams<{ id: string }>()
+  const projectId = params?.id
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<'about' | 'media' | 'location'>('about')
   const [project, setProject] = useState<Project | null>(null)
   const [media, setMedia] = useState<Media[]>([])
   const [uploading, setUploading] = useState(false)
 
-  useEffect(() => {
-    loadProject()
-  }, [params.id])
+  const loadProject = useCallback(async () => {
+    if (!projectId) return
 
-  const loadProject = async () => {
     try {
-      const res = await fetch(`/api/projects/${params.id}`)
-      if (!res.ok) throw new Error('Failed to fetch')
+      const res = await fetch(`/api/projects/${projectId}`)
       const data = await res.json()
-      setProject(data)
+      if (!res.ok) throw new Error(data?.error || `Hata: ${res.status}`)
+      setProject({
+        id: data.id,
+        name: data.name || data.title || '',
+        slug: data.slug || '',
+        status: data.status || 'draft',
+        project_status:
+          data.project_status === 'completed' || data.project_status === 'ongoing'
+            ? data.project_status
+            : data.status === 'completed' || data.status === 'ongoing'
+              ? data.status
+              : 'ongoing',
+        is_featured: !!data.is_featured,
+        about_text: data.about_text || '',
+        about_image_url: data.about_image_url || null,
+        cta_text: data.cta_text || 'Detayları Gör',
+        apartment_options: data.apartment_options || '',
+        neighborhood: data.neighborhood || '',
+        location_description: data.location_description || '',
+        location_image_url: data.location_image_url || null,
+        meta_title: data.meta_title || '',
+        meta_desc: data.meta_desc || '',
+      })
       setMedia(data.project_media || [])
+      setErrorMessage(null)
     } catch (error) {
       console.error('Error loading project:', error)
+      setErrorMessage(error instanceof Error ? error.message : 'Proje yüklenemedi')
     } finally {
       setLoading(false)
     }
-  }
+  }, [projectId])
+
+  useEffect(() => {
+    loadProject()
+  }, [loadProject])
 
   const handleSave = async () => {
-    if (!project) return
+    if (!project || !projectId) return
     setSaving(true)
 
     try {
-      const res = await fetch(`/api/projects/${params.id}`, {
+      const payload = {
+        name: project.name,
+        slug: project.slug,
+        status: project.status,
+        project_status: project.project_status,
+        is_featured: project.is_featured,
+        about_text: project.about_text,
+        cta_text: project.cta_text,
+        apartment_options: project.apartment_options,
+        neighborhood: project.neighborhood,
+        location_description: project.location_description,
+        meta_title: project.meta_title,
+        meta_desc: project.meta_desc,
+      }
+
+      const res = await fetch(`/api/projects/${projectId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(project)
+        body: JSON.stringify(payload)
       })
 
-      if (!res.ok) throw new Error('Failed to update')
+      const data = await res.json()
+      if (!res.ok) throw new Error(data?.error || 'Failed to update')
       alert('Değişiklikler kaydedildi')
+      setErrorMessage(null)
     } catch (error) {
       console.error('Update error:', error)
-      alert('Kaydetme sırasında bir hata oluştu')
+      const msg = error instanceof Error ? error.message : 'Kaydetme sırasında bir hata oluştu'
+      setErrorMessage(msg)
+      alert(msg)
     } finally {
       setSaving(false)
     }
   }
 
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, category: string) => {
-    const file = e.target.files?.[0]
-    if (!file || !project) return
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, category: MediaCategory) => {
+    const files = Array.from(e.target.files || [])
+    if (files.length === 0 || !project) return
 
     setUploading(true)
     try {
-      // 1. Presigned URL al
-      const presignRes = await fetch('/api/media/presign', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          projectId: project.id,
-          category,
-          contentType: file.type,
-          fileSize: file.size,
-          fileExtension: file.name.split('.').pop()
+      const isSingleCategory = category === 'about' || category === 'location'
+      const filesToUpload = isSingleCategory ? files.slice(0, 1) : files
+
+      const startSortOrder = media.filter((m) => m.category === category).length
+
+      const results = await Promise.allSettled(
+        filesToUpload.map(async (file, index) => {
+          const formData = new FormData()
+          formData.append('file', file)
+          formData.append('folder', `projects/${project.id}/${category}`)
+
+          const uploadRes = await fetch('/api/upload', {
+            method: 'POST',
+            body: formData,
+          })
+
+          const uploadJson = await uploadRes.json()
+          if (!uploadRes.ok) {
+            throw new Error(uploadJson?.error || `${file.name}: Upload failed`)
+          }
+
+          const dimensions = await getImageDimensions(file)
+
+          const saveRes = await fetch('/api/media', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              project_id: project.id,
+              url: uploadJson.url,
+              category,
+              file_name: file.name,
+              file_size: file.size,
+              width: dimensions.width,
+              height: dimensions.height,
+              sort_order: startSortOrder + index,
+            }),
+          })
+
+          const saveData = await saveRes.json()
+          if (!saveRes.ok) {
+            throw new Error(saveData?.error || `${file.name}: Save failed`)
+          }
         })
-      })
+      )
 
-      if (!presignRes.ok) throw new Error('Presign failed')
-      const { presignedUrl, key, publicUrl } = await presignRes.json()
+      const failed = results
+        .filter((r): r is PromiseRejectedResult => r.status === 'rejected')
+        .map((r) => String(r.reason))
 
-      // 2. R2'ye yükle
-      const uploadRes = await fetch(presignedUrl, {
-        method: 'PUT',
-        body: file,
-        headers: { 'Content-Type': file.type }
-      })
+      if (failed.length > 0) {
+        throw new Error(failed.join('\n'))
+      }
 
-      if (!uploadRes.ok) throw new Error('Upload failed')
-
-      // 3. Görsel boyutlarını al
-      const dimensions = await getImageDimensions(file)
-
-      // 4. DB'ye kaydet
-      const saveRes = await fetch('/api/media', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          projectId: project.id,
-          r2Key: key,
-          publicUrl,
-          category,
-          fileSize: file.size,
-          width: dimensions.width,
-          height: dimensions.height
-        })
-      })
-
-      if (!saveRes.ok) throw new Error('Save failed')
-
-      // 5. Projeyi yeniden yükle
       loadProject()
     } catch (error) {
       console.error('Upload error:', error)
-      alert('Yükleme sırasında bir hata oluştu')
+      alert(error instanceof Error ? error.message : 'Yukleme sirasinda bir hata olustu')
     } finally {
       setUploading(false)
+      e.currentTarget.value = ''
     }
   }
-
   const handleDeleteMedia = async (mediaId: string) => {
     if (!confirm('Bu görseli silmek istediğinize emin misiniz?')) return
 
@@ -238,6 +293,12 @@ export default function ProjeDuzenlePage({ params }: { params: { id: string } })
         </div>
       </div>
 
+      {errorMessage && (
+        <div className="mb-6 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          {errorMessage}
+        </div>
+      )}
+
       {/* Tabs */}
       <div className="flex gap-2 mb-6">
         <button
@@ -310,14 +371,33 @@ export default function ProjeDuzenlePage({ params }: { params: { id: string } })
                   <label className="block text-sm font-medium text-gray-700 mb-2">Durum</label>
                   <select
                     value={project.status}
-                    onChange={(e) => setProject({ ...project, status: e.target.value as any })}
+                    onChange={(e) => setProject({ ...project, status: e.target.value as Project['status'] })}
                     className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
                   >
-                    <option value="draft">🟡 Taslak</option>
-                    <option value="published">🟢 Yayında</option>
-                    <option value="archived">🔴 Arşiv</option>
+                    <option value="draft">Taslak</option>
+                    <option value="published">Yayında</option>
+                    <option value="archived">Arşiv</option>
                   </select>
                 </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Proje Aşaması</label>
+                  <select
+                    value={project.project_status}
+                    onChange={(e) =>
+                      setProject({
+                        ...project,
+                        project_status: e.target.value as Project['project_status'],
+                      })
+                    }
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                  >
+                    <option value="ongoing">Devam Ediyor</option>
+                    <option value="completed">Tamamlandı</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
                 <div className="flex items-center">
                   <label className="flex items-center cursor-pointer">
                     <input
@@ -436,6 +516,7 @@ export default function ProjeDuzenlePage({ params }: { params: { id: string } })
                 <input
                   type="file"
                   accept="image/*"
+                  multiple
                   className="hidden"
                   onChange={(e) => handleFileUpload(e, 'exterior')}
                   disabled={uploading}
@@ -474,6 +555,7 @@ export default function ProjeDuzenlePage({ params }: { params: { id: string } })
                 <input
                   type="file"
                   accept="image/*"
+                  multiple
                   className="hidden"
                   onChange={(e) => handleFileUpload(e, 'interior')}
                   disabled={uploading}
@@ -546,7 +628,7 @@ export default function ProjeDuzenlePage({ params }: { params: { id: string } })
                 type="text"
                 value={project.apartment_options || ''}
                 onChange={(e) => setProject({ ...project, apartment_options: e.target.value })}
-                placeholder="3+1 130 – 2+1 90 M2 DAİRE SEÇENEKLERİ"
+                placeholder="3+1 130 - 2+1 90 M2 DAİRE SEÇENEKLERİ"
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
               />
             </div>
@@ -577,3 +659,4 @@ export default function ProjeDuzenlePage({ params }: { params: { id: string } })
     </div>
   )
 }
+

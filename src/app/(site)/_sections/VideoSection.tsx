@@ -25,10 +25,14 @@ export function VideoSection({ data }: VideoSectionProps) {
   const isInView = useInView(ref, { once: true, margin: '-100px' })
 
   const { background_image, video_type, video_id, title, description, play_button_text, autoplay } = data
+  const hasBackgroundImage = Boolean(background_image && background_image.trim().length > 0)
 
   const getVideoEmbedUrl = () => {
-    if (video_type === 'youtube') {
+    if (video_type === 'youtube' && video_id) {
       return `https://www.youtube.com/embed/${video_id}?autoplay=${autoplay ? 1 : 0}&rel=0`
+    }
+    if (video_type === 'self_hosted' && data.video_url) {
+      return data.video_url
     }
     return ''
   }
@@ -42,16 +46,20 @@ export function VideoSection({ data }: VideoSectionProps) {
         <motion.div
           initial={{ scale: 1.1 }}
           animate={isInView ? { scale: 1 } : {}}
-          transition={{ duration: 1.5 }}
-          className="absolute inset-0"
-        >
-          <Image
-            src={background_image}
-            alt="Video thumbnail"
-            fill
-            className="object-cover"
-            sizes="100vw"
-          />
+        transition={{ duration: 1.5 }}
+        className="absolute inset-0"
+      >
+          {hasBackgroundImage ? (
+            <Image
+              src={background_image}
+              alt="Video thumbnail"
+              fill
+              className="object-cover"
+              sizes="100vw"
+            />
+          ) : (
+            <div className="h-full w-full bg-gradient-to-br from-[#0F1D2F] via-[#1E3A5F] to-[#2E5A8F]" />
+          )}
           <div className="absolute inset-0 bg-[#1E3A5F]/50" />
         </motion.div>
 
@@ -122,13 +130,19 @@ export function VideoSection({ data }: VideoSectionProps) {
               className="relative w-full max-w-5xl mx-4 aspect-video"
               onClick={(e) => e.stopPropagation()}
             >
-              <iframe
-                src={getVideoEmbedUrl()}
-                title="Video"
-                className="absolute inset-0 w-full h-full rounded-xl"
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                allowFullScreen
-              />
+              {getVideoEmbedUrl() ? (
+                <iframe
+                  src={getVideoEmbedUrl()}
+                  title="Video"
+                  className="absolute inset-0 w-full h-full rounded-xl"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                />
+              ) : (
+                <div className="absolute inset-0 flex items-center justify-center rounded-xl bg-white/10 text-white">
+                  Video bağlantısı bulunamadı.
+                </div>
+              )}
             </motion.div>
           </motion.div>
         )}

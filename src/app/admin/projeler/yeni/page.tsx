@@ -4,12 +4,12 @@ import { useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
-import { 
-  ArrowLeft, 
-  Save, 
-  Building2, 
-  Upload, 
-  CheckCircle2, 
+import {
+  ArrowLeft,
+  Save,
+  Building2,
+  Upload,
+  CheckCircle2,
   Clock,
   AlertCircle,
   X,
@@ -22,33 +22,33 @@ import {
 
 // Kategoriler
 const CATEGORIES = [
-  { 
-    key: 'about', 
-    label: 'Kapak Görseli', 
+  {
+    key: 'about',
+    label: 'Kapak Görseli',
     icon: ImageIcon,
     desc: 'Proje listesinde gösterilecek ana fotoğraf (1 adet)',
     color: 'bg-blue-500',
     maxFiles: 1
   },
-  { 
-    key: 'exterior', 
-    label: 'Dış Mekan', 
+  {
+    key: 'exterior',
+    label: 'Dış Mekan',
     icon: Building2,
     desc: 'Bina dış cephe, site görünümü fotoğrafları',
     color: 'bg-green-500',
     maxFiles: 20
   },
-  { 
-    key: 'interior', 
-    label: 'İç Mekan', 
+  {
+    key: 'interior',
+    label: 'İç Mekan',
     icon: Home,
     desc: 'Daire içi, salon, mutfak, banyo fotoğrafları',
     color: 'bg-purple-500',
     maxFiles: 30
   },
-  { 
-    key: 'location', 
-    label: 'Proje Konumu', 
+  {
+    key: 'location',
+    label: 'Proje Konumu',
     icon: MapPin,
     desc: 'Harita, çevre, ulaşım fotoğrafları',
     color: 'bg-amber-500',
@@ -84,13 +84,13 @@ export default function YeniProjePage() {
   const [uploading, setUploading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [activeCategory, setActiveCategory] = useState<CategoryKey>('about')
-  
+
   const [form, setForm] = useState<ProjectForm>({
     name: '',
     project_status: 'ongoing',
     about_text: '',
   })
-  
+
   // Yüklenen dosyaları kategoriye göre sakla
   const [mediaFiles, setMediaFiles] = useState<Record<CategoryKey, MediaFile[]>>({
     about: [],
@@ -122,7 +122,7 @@ export default function YeniProjePage() {
 
     const categoryConfig = CATEGORIES.find(c => c.key === category)!
     const currentCount = mediaFiles[category].length
-    
+
     // Limit kontrolü
     if (currentCount + files.length > categoryConfig.maxFiles) {
       setError(`${categoryConfig.label} için en fazla ${categoryConfig.maxFiles} fotoğraf yükleyebilirsiniz.`)
@@ -167,7 +167,7 @@ export default function YeniProjePage() {
         })
 
         const data = await res.json()
-        
+
         if (!res.ok) {
           throw new Error(data.error || 'Yükleme başarısız')
         }
@@ -175,8 +175,8 @@ export default function YeniProjePage() {
         // URL'yi güncelle
         setMediaFiles(prev => ({
           ...prev,
-          [category]: prev[category].map(f => 
-            f.id === mediaFile.id 
+          [category]: prev[category].map(f =>
+            f.id === mediaFile.id
               ? { ...f, url: data.url, uploading: false }
               : f
           )
@@ -221,7 +221,7 @@ export default function YeniProjePage() {
 
       const slug = generateSlug(form.name)
       const aboutImageUrl = mediaFiles.about[0]?.url
-      
+
       // 1. Projeyi oluştur
       const res = await fetch('/api/projects', {
         method: 'POST',
@@ -239,7 +239,7 @@ export default function YeniProjePage() {
       })
 
       const projectData = await res.json()
-      
+
       if (!res.ok) {
         throw new Error(projectData.error || `Hata: ${res.status}`)
       }
@@ -263,7 +263,7 @@ export default function YeniProjePage() {
           })
         })
       }
-      
+
       router.push('/admin/projeler')
       router.refresh()
     } catch (err: any) {
@@ -297,7 +297,7 @@ export default function YeniProjePage() {
         <div className="mb-6 bg-red-50 border border-red-200 rounded-xl p-4 flex items-start">
           <AlertCircle className="w-5 h-5 text-red-500 mt-0.5 mr-3 flex-shrink-0" />
           <p className="text-red-700">{error}</p>
-          <button 
+          <button
             onClick={() => setError(null)}
             className="ml-auto text-red-400 hover:text-red-600"
           >
@@ -329,17 +329,16 @@ export default function YeniProjePage() {
               {PROJECT_STATUSES.map((status) => {
                 const Icon = status.icon
                 const isSelected = form.project_status === status.value
-                
+
                 return (
                   <button
                     key={status.value}
                     type="button"
                     onClick={() => setForm(prev => ({ ...prev, project_status: status.value }))}
-                    className={`p-4 rounded-xl border-2 text-left transition-all ${
-                      isSelected 
-                        ? 'border-blue-500 bg-blue-50' 
+                    className={`p-4 rounded-xl border-2 text-left transition-all ${isSelected
+                        ? 'border-blue-500 bg-blue-50'
                         : 'border-gray-200 hover:border-gray-300'
-                    }`}
+                      }`}
                   >
                     <div className={`w-10 h-10 ${status.color} rounded-lg flex items-center justify-center mb-2`}>
                       <Icon className="w-5 h-5 text-white" />
@@ -367,31 +366,29 @@ export default function YeniProjePage() {
         {/* BÖLÜM 2: Fotoğraf Galerisi */}
         <section className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
           <h2 className="text-lg font-semibold text-gray-900 mb-6">Proje Fotoğrafları</h2>
-          
+
           {/* Kategori Sekmeleri */}
           <div className="flex flex-wrap gap-2 mb-6">
             {CATEGORIES.map((cat) => {
               const Icon = cat.icon
               const count = mediaFiles[cat.key].length
               const isActive = activeCategory === cat.key
-              
+
               return (
                 <button
                   key={cat.key}
                   type="button"
                   onClick={() => setActiveCategory(cat.key)}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all ${
-                    isActive 
-                      ? 'bg-blue-600 text-white' 
+                  className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all ${isActive
+                      ? 'bg-blue-600 text-white'
                       : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                  }`}
+                    }`}
                 >
                   <Icon className="w-4 h-4" />
                   <span>{cat.label}</span>
                   {count > 0 && (
-                    <span className={`px-2 py-0.5 rounded-full text-xs ${
-                      isActive ? 'bg-white/20' : 'bg-blue-100 text-blue-700'
-                    }`}>
+                    <span className={`px-2 py-0.5 rounded-full text-xs ${isActive ? 'bg-white/20' : 'bg-blue-100 text-blue-700'
+                      }`}>
                       {count}
                     </span>
                   )}
@@ -422,31 +419,30 @@ export default function YeniProjePage() {
 
             {/* Fotoğraf Grid */}
             {mediaFiles[activeCategory].length > 0 ? (
-              <div className={`grid gap-4 ${
-                activeCategory === 'about' 
-                  ? 'grid-cols-1 max-w-md' 
+              <div className={`grid gap-4 ${activeCategory === 'about'
+                  ? 'grid-cols-1 max-w-md'
                   : 'grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5'
-              }`}>
+                }`}>
                 {mediaFiles[activeCategory].map((file, index) => (
-                  <div 
-                    key={file.id} 
-                    className={`relative group rounded-lg overflow-hidden border ${
-                      activeCategory === 'about' ? 'aspect-video' : 'aspect-square'
-                    }`}
+                  <div
+                    key={file.id}
+                    className={`relative group rounded-lg overflow-hidden border ${activeCategory === 'about' ? 'aspect-video' : 'aspect-square'
+                      }`}
                   >
                     <Image
                       src={file.url}
                       alt={`${activeCategoryConfig.label} ${index + 1}`}
                       fill
+                      sizes="(max-width: 640px) 50vw, (max-width: 768px) 33vw, 20vw"
                       className="object-cover"
                     />
-                    
+
                     {file.uploading && (
                       <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
                         <Loader2 className="w-8 h-8 text-white animate-spin" />
                       </div>
                     )}
-                    
+
                     <button
                       type="button"
                       onClick={() => handleRemoveFile(activeCategory, file.id)}
@@ -454,7 +450,7 @@ export default function YeniProjePage() {
                     >
                       <X className="w-4 h-4" />
                     </button>
-                    
+
                     {activeCategory !== 'about' && (
                       <div className="absolute bottom-2 left-2 px-2 py-1 bg-black/50 text-white text-xs rounded">
                         {index + 1}

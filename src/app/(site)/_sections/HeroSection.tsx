@@ -44,6 +44,7 @@ export function HeroSection({ data }: HeroSectionProps) {
     autoplay = true,
     autoplay_speed = 5000,
   } = data
+  const hasSrc = (value?: string | null) => Boolean(value && value.trim().length > 0)
 
   // Slider için embla
   const [emblaRef, emblaApi] = useEmblaCarousel(
@@ -78,15 +79,18 @@ export function HeroSection({ data }: HeroSectionProps) {
       <section className="relative w-full aspect-[1920/800] min-h-[500px] max-h-[800px] overflow-hidden">
         {/* Background Image */}
         <div className="absolute inset-0 z-0">
-          <Image
-            src={background_image}
-            alt="Hero"
-            fill
-            className="object-cover object-center"
-            priority
-            sizes="100vw"
-            quality={90}
-          />
+          {hasSrc(background_image) ? (
+            <Image
+              src={background_image}
+              alt="Hero"
+              fill
+              className="object-cover object-center"
+              priority
+              sizes="100vw"
+            />
+          ) : (
+            <div className="h-full w-full bg-gradient-to-br from-[#0F1D2F] via-[#1E3A5F] to-[#2E5A8F]" />
+          )}
         </div>
       </section>
     )
@@ -102,27 +106,29 @@ export function HeroSection({ data }: HeroSectionProps) {
               {/* Slide Background */}
               <div className="absolute inset-0">
                 {/* Mobil görsel (md'den küçük ekranlar) */}
-                {slide.mobile_image && (
+                {hasSrc(slide.mobile_image) && (
                   <Image
-                    src={slide.mobile_image}
+                    src={slide.mobile_image as string}
                     alt={slide.title || `Slide ${index + 1}`}
                     fill
                     className="object-cover object-center md:hidden"
                     priority={index === 0}
                     sizes="100vw"
-                    quality={90}
                   />
                 )}
                 {/* Desktop görsel */}
-                <Image
-                  src={slide.image}
-                  alt={slide.title || `Slide ${index + 1}`}
-                  fill
-                  className={`object-cover object-center ${slide.mobile_image ? 'hidden md:block' : ''}`}
-                  priority={index === 0}
-                  sizes="100vw"
-                  quality={90}
-                />
+                {hasSrc(slide.image) ? (
+                  <Image
+                    src={slide.image}
+                    alt={slide.title || `Slide ${index + 1}`}
+                    fill
+                    className={`object-cover object-center ${slide.mobile_image ? 'hidden md:block' : ''}`}
+                    priority={index === 0}
+                    sizes="100vw"
+                  />
+                ) : (
+                  <div className="h-full w-full bg-gradient-to-br from-[#0F1D2F] via-[#1E3A5F] to-[#2E5A8F]" />
+                )}
                 <div className="absolute inset-0 bg-gradient-to-l from-white/30 via-transparent to-transparent" />
               </div>
 

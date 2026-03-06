@@ -1,259 +1,236 @@
 import { createClient } from '@/lib/supabase/server'
 import { notFound } from 'next/navigation'
-import { 
-  ArrowDown, 
-  MapPin, 
-  Home, 
-  Maximize, 
-  ChevronLeft, 
-  ChevronRight 
-} from 'lucide-react'
 import Link from 'next/link'
+import { ArrowLeft, MapPin, Building2, CheckCircle2, Clock3, PhoneCall, ChevronRight } from 'lucide-react'
+import { MediaGallerySection } from './MediaGallerySection'
 
-// ISR: 5 dakikada bir revalidate
 export const revalidate = 300
 
-export async function generateMetadata({ params }: { params: { slug: string } }) {
+interface RouteParams {
+  slug: string
+}
+
+interface ProjectMedia {
+  id: string
+  url: string
+  category: 'about' | 'exterior' | 'interior' | 'location'
+  sort_order: number | null
+}
+
+interface ProjectRecord {
+  id: string
+  name: string | null
+  title: string | null
+  slug: string
+  status: string | null
+  project_status: 'completed' | 'ongoing' | null
+  about_text: string | null
+  about_image_url: string | null
+  cta_text: string | null
+  apartment_options: string | null
+  neighborhood: string | null
+  location_description: string | null
+  location_image_url: string | null
+  meta_title: string | null
+  meta_desc: string | null
+}
+
+async function getProjectDetail(slug: string): Promise<{ project: ProjectRecord; media: ProjectMedia[] } | null> {
   const supabase = await createClient()
-  const { data } = await supabase
+
+  const { data: project, error: projectError } = await supabase
     .from('projects')
-    .select('meta_title, meta_desc, name')
-    .eq('slug', params.slug)
-    .eq('status', 'published')
+    .select('*')
+    .eq('slug', slug)
+    .or('status.eq.published,is_published.eq.true')
     .single()
 
-  if (!data) return {}
+  if (projectError || !project) {
+    return null
+  }
+
+  const { data: media } = await supabase
+    .from('project_media')
+    .select('id,url,category,sort_order')
+    .eq('project_id', project.id)
+    .order('sort_order', { ascending: true })
 
   return {
-    title: data.meta_title || `${data.name} | Aklar İnşaat`,
-    description: data.meta_desc,
+    project: project as ProjectRecord,
+    media: (media || []) as ProjectMedia[],
   }
 }
 
-export default async function ProjeDetayPage({ 
-  params 
-}: { 
-  params: { slug: string } 
-}) {
-  const supabase = await createClient()
+export async function generateMetadata({ params }: { params: Promise<RouteParams> }) {
+  const { slug } = await params
+  const detail = await getProjectDetail(slug)
 
-  // Proje ve medyaları tek sorguda al
-  const { data: project } = await supabase
-    .from('projects')
-    .select(`
-      *,
-      project_media (
-        id, url, category, sort_order
-      )
-    `)
-    .eq('slug', params.slug)
-    .eq('status', 'published')
-    .order('sort_order', { referencedTable: 'project_media', ascending: true })
-    .single()
+  if (!detail) {
+    return {
+      title: 'Proje Bulunamadı | Aklar İnşaat',
+      description: 'İstenen proje kaydı bulunamadı.',
+    }
+  }
 
-  if (!project) {
+  const projectName = detail.project.name || detail.project.title || 'Proje Detayı'
+
+  return {
+    title: detail.project.meta_title || `${projectName} | Aklar İnşaat`,
+    description: detail.project.meta_desc || detail.project.about_text || 'Aklar İnşaat proje detay sayfası.',
+  }
+}
+
+function StatusBadge({ status }: { status: ProjectRecord['project_status'] }) {
+  if (status === 'completed') {
+    return (
+      <span className="inline-flex items-center gap-2 rounded-full bg-blue-600/10 px-4 py-2 text-sm font-semibold text-blue-700">
+        <CheckCircle2 className="h-4 w-4" />
+        Tamamlandi
+      </span>
+    )
+  }
+
+  return (
+    <span className="inline-flex items-center gap-2 rounded-full bg-amber-500/15 px-4 py-2 text-sm font-semibold text-amber-700">
+      <Clock3 className="h-4 w-4" />
+      Devam Ediyor
+    </span>
+  )
+}
+
+export default async function ProjeDetayPage({ params }: { params: Promise<RouteParams> }) {
+  const { slug } = await params
+  const detail = await getProjectDetail(slug)
+
+  if (!detail) {
     notFound()
   }
 
-  // Medyaları kategoriye göre grupla
-  const aboutImage = project.project_media?.find((m: any) => m.category === 'about')?.url 
-    || project.about_image_url
-  const exteriorImages = project.project_media?.filter((m: any) => m.category === 'exterior') || []
-  const interiorImages = project.project_media?.filter((m: any) => m.category === 'interior') || []
-  const locationImage = project.project_media?.find((m: any) => m.category === 'location')?.url 
-    || project.location_image_url
+  const { project, media } = detail
+  const projectName = project.name || project.title || 'Proje Detayı'
+
+  const aboutImage = media.find((m) => m.category === 'about')?.url || project.about_image_url
+  const exteriorImages = media.filter((m) => m.category === 'exterior')
+  const interiorImages = media.filter((m) => m.category === 'interior')
+  const locationImage = media.find((m) => m.category === 'location')?.url || project.location_image_url
 
   return (
-    <div className="min-h-screen bg-white">
-      {/* Back Button */}
-      <div className="container mx-auto px-4 py-6">
-        <Link
-          href="/projeler"
-          className="inline-flex items-center text-gray-600 hover:text-[#1E3A5F] transition-colors"
-        >
-          <ChevronLeft className="w-5 h-5 mr-1" />
-          Tüm Projeler
-        </Link>
-      </div>
-
-      {/* BÖLÜM 1: Proje Hakkında */}
-      <section id="about" className="py-16">
-        <div className="container mx-auto px-4">
-          <div className="grid grid-cols-1 lg:grid-cols-5 gap-12 items-center">
-            {/* Sol: Görsel */}
-            <div className="lg:col-span-3">
-              <div className="relative aspect-[4/3] rounded-2xl overflow-hidden shadow-2xl">
-                {aboutImage ? (
-                  <img
-                    src={aboutImage}
-                    alt={project.name}
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <div className="w-full h-full bg-gray-200 flex items-center justify-center">
-                    <Home className="w-24 h-24 text-gray-300" />
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Sağ: İçerik */}
-            <div className="lg:col-span-2">
-              <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-6">
-                {project.name}
-              </h1>
-              <div className="text-2xl md:text-3xl font-bold text-[#C9A962] mb-6 leading-tight">
-                {project.about_text?.split('\n')[0] || 'Modern Yaşam Alanları'}
-              </div>
-              <p className="text-gray-600 text-lg leading-relaxed mb-8">
-                {project.about_text}
-              </p>
-              <a
-                href="#location"
-                className="inline-flex items-center px-6 py-3 bg-[#1E3A5F] text-white rounded-lg hover:bg-[#0F1D2F] transition-colors"
-              >
-                {project.cta_text || 'Devamı'}
-                <ArrowDown className="w-5 h-5 ml-2" />
-              </a>
-            </div>
-          </div>
+    <div className="min-h-screen bg-[#f5f7fa]">
+      <section className="relative overflow-hidden bg-gradient-to-br from-[#0f1d2f] via-[#1E3A5F] to-[#2E5A8F] text-white">
+        <div className="absolute inset-0 opacity-15">
+          {aboutImage ? <img src={aboutImage} alt="" className="h-full w-full object-cover" /> : null}
         </div>
-      </section>
+        <div className="container mx-auto px-4 py-10 lg:py-14 relative z-10">
+          <Link href="/projeler" className="mb-8 inline-flex items-center text-white/85 transition hover:text-white">
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Projelere Dön
+          </Link>
 
-      {/* BÖLÜM 2: Dış Mekan */}
-      {exteriorImages.length > 0 && (
-        <section className="py-16 bg-gray-50">
-          <div className="container mx-auto px-4">
-            <h2 className="text-3xl font-bold text-gray-900 mb-12 text-center">
-              Dış Mekan
-            </h2>
-            <div className="relative">
-              <div className="flex gap-6 overflow-x-auto pb-4 scrollbar-hide snap-x">
-                {exteriorImages.map((image: any, index: number) => (
-                  <div
-                    key={image.id}
-                    className="flex-shrink-0 w-[400px] snap-center"
-                  >
-                    <div className="aspect-video rounded-xl overflow-hidden shadow-lg">
-                      <img
-                        src={image.url}
-                        alt={`Dış mekan ${index + 1}`}
-                        className="w-full h-full object-cover hover:scale-105 transition-transform duration-500"
-                      />
-                    </div>
-                  </div>
-                ))}
-              </div>
-              {/* Scroll indicators */}
-              <div className="flex justify-center gap-2 mt-6">
-                {exteriorImages.map((_: any, index: number) => (
-                  <div
-                    key={index}
-                    className={`w-2 h-2 rounded-full ${
-                      index === 0 ? 'bg-[#1E3A5F]' : 'bg-gray-300'
-                    }`}
-                  />
-                ))}
-              </div>
-            </div>
-          </div>
-        </section>
-      )}
-
-      {/* BÖLÜM 3: İç Mekan */}
-      {interiorImages.length > 0 && (
-        <section className="py-16">
-          <div className="container mx-auto px-4">
-            <h2 className="text-3xl font-bold text-gray-900 mb-12 text-center">
-              İç Mekan
-            </h2>
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-              {interiorImages.map((image: any, index: number) => (
-                <div
-                  key={image.id}
-                  className="aspect-square rounded-lg overflow-hidden shadow-md group"
-                >
-                  <img
-                    src={image.url}
-                    alt={`İç mekan ${index + 1}`}
-                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                  />
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-      )}
-
-      {/* BÖLÜM 4: Proje Konumu */}
-      <section id="location" className="py-16 bg-gray-50">
-        <div className="container mx-auto px-4">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-            {/* Sol: Konum Görseli */}
-            <div>
-              <div className="relative aspect-[4/3] rounded-2xl overflow-hidden shadow-2xl">
-                {locationImage ? (
-                  <img
-                    src={locationImage}
-                    alt="Proje konumu"
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <div className="w-full h-full bg-gray-200 flex items-center justify-center">
-                    <MapPin className="w-24 h-24 text-gray-300" />
-                  </div>
-                )}
-              </div>
+          <div className="grid gap-8 lg:grid-cols-12 lg:items-end">
+            <div className="lg:col-span-8">
+              <StatusBadge status={project.project_status} />
+              <h1 className="mt-5 text-4xl font-semibold leading-tight md:text-6xl">{projectName}</h1>
+              <p className="mt-5 max-w-3xl text-base text-white/90 md:text-lg">
+                {project.about_text || 'Bu proje için detaylı tanıtım metni yakında eklenecektir.'}
+              </p>
             </div>
 
-            {/* Sağ: Konum Bilgileri */}
-            <div>
-              <h2 className="text-3xl font-bold text-gray-900 mb-6">
-                Proje Konumu
-              </h2>
-              
-              {project.apartment_options && (
-                <div className="text-2xl font-bold text-[#C9A962] mb-4">
-                  {project.apartment_options}
-                </div>
-              )}
-              
-              {project.neighborhood && (
-                <div className="text-xl text-[#1E3A5F] font-semibold mb-6">
-                  {project.neighborhood}
-                </div>
-              )}
-              
-              {project.location_description && (
-                <p className="text-gray-600 text-lg leading-relaxed">
-                  {project.location_description}
-                </p>
-              )}
-
-              {/* WhatsApp CTA */}
-              <div className="mt-8 p-6 bg-[#25D366]/10 rounded-xl border border-[#25D366]/20">
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                  Bilgi Almak İster misiniz?
-                </h3>
-                <p className="text-gray-600 mb-4">
-                  WhatsApp üzerinden bize ulaşın, detaylı bilgi alın.
-                </p>
+            <div className="lg:col-span-4">
+              <div className="rounded-2xl border border-white/25 bg-white/10 p-6 backdrop-blur-md">
+                <p className="text-xs uppercase tracking-[0.18em] text-white/70">Hizli Bilgi</p>
+                <p className="mt-3 text-2xl font-semibold">{project.apartment_options || 'Daire secenekleri yakinda'}</p>
+                <p className="mt-2 text-white/80">{project.neighborhood || 'Konum bilgisi guncelleniyor'}</p>
                 <a
-                  href="https://wa.me/905000000000?text=Merhaba, Aklar İnşaat hakkında bilgi almak istiyorum."
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center px-6 py-3 bg-[#25D366] text-white rounded-lg hover:bg-[#128C7E] transition-colors"
+                  href="#konum"
+                  className="mt-6 inline-flex items-center rounded-xl bg-[#CF000C] px-5 py-3 text-sm font-semibold transition hover:bg-[#990000]"
                 >
-                  <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
-                  </svg>
-                  WhatsApp'tan Bize Ulaşın
+                  {project.cta_text || 'Konumu Incele'}
+                  <ChevronRight className="ml-1 h-4 w-4" />
                 </a>
               </div>
             </div>
           </div>
         </div>
       </section>
+
+      <main className="container mx-auto space-y-12 px-4 py-12 lg:space-y-16">
+        <section className="grid gap-8 lg:grid-cols-12">
+          <div className="lg:col-span-7 overflow-hidden rounded-3xl bg-white shadow-xl">
+            {aboutImage ? (
+              <img src={aboutImage} alt={projectName} className="h-full min-h-[300px] w-full object-cover" />
+            ) : (
+              <div className="flex min-h-[300px] items-center justify-center bg-gray-100 text-gray-300">
+                <Building2 className="h-16 w-16" />
+              </div>
+            )}
+          </div>
+
+          <div className="lg:col-span-5 rounded-3xl bg-white p-8 shadow-xl">
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#2E5A8F]">Proje Özeti</p>
+            <h2 className="mt-3 text-3xl font-semibold text-[#0F1D2F]">Mimari ve Yaşam Kurgusu</h2>
+            <p className="mt-5 text-gray-600">
+              {project.about_text || 'Proje açıklaması henüz admin panelinden doldurulmadı.'}
+            </p>
+            <ul className="mt-6 space-y-3 text-sm text-gray-700">
+              <li className="rounded-lg bg-[#f4f7fb] px-4 py-3">Daire Seçenekleri: {project.apartment_options || 'Belirtilmedi'}</li>
+              <li className="rounded-lg bg-[#f4f7fb] px-4 py-3">Mahalle: {project.neighborhood || 'Belirtilmedi'}</li>
+              <li className="rounded-lg bg-[#f4f7fb] px-4 py-3">Durum: {project.project_status === 'completed' ? 'Tamamlandı' : 'Devam Ediyor'}</li>
+            </ul>
+          </div>
+        </section>
+
+        {exteriorImages.length > 0 ? (
+          <MediaGallerySection
+            title="Dış Mekan"
+            projectName={projectName}
+            imageType="dış mekan"
+            images={exteriorImages.map((image) => ({ id: image.id, url: image.url }))}
+          />
+        ) : null}
+
+        {interiorImages.length > 0 ? (
+          <MediaGallerySection
+            title="İç Mekan"
+            projectName={projectName}
+            imageType="iç mekan"
+            images={interiorImages.map((image) => ({ id: image.id, url: image.url }))}
+          />
+        ) : null}
+
+        <section id="konum" className="grid gap-8 lg:grid-cols-12">
+          <div className="lg:col-span-7 overflow-hidden rounded-3xl bg-white shadow-xl">
+            {locationImage ? (
+              <img src={locationImage} alt={`${projectName} konum`} className="h-full min-h-[320px] w-full object-cover" />
+            ) : (
+              <div className="flex min-h-[320px] items-center justify-center bg-gray-100 text-gray-300">
+                <MapPin className="h-16 w-16" />
+              </div>
+            )}
+          </div>
+
+          <div className="lg:col-span-5 rounded-3xl bg-white p-8 shadow-xl">
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#2E5A8F]">Konum</p>
+            <h3 className="mt-2 text-3xl font-semibold text-[#0F1D2F]">Ulaşım ve Çevre</h3>
+            <p className="mt-5 text-gray-600">
+              {project.location_description || 'Konum açıklaması henüz eklenmedi. Ayrıntılı bilgi için bizimle iletişime geçebilirsiniz.'}
+            </p>
+
+            <div className="mt-8 rounded-2xl border border-[#25D366]/25 bg-[#25D366]/10 p-5">
+              <p className="font-semibold text-[#0F1D2F]">Detaylı Bilgi Alın</p>
+              <p className="mt-2 text-sm text-gray-700">Satış ekibimizle hemen görüşüp fiyat ve ödeme planlarını öğrenin.</p>
+              <a
+                href="https://wa.me/905457277297?text=Merhaba, proje hakkında detaylı bilgi almak istiyorum."
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-4 inline-flex items-center rounded-xl bg-[#25D366] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#128C7E]"
+              >
+                <PhoneCall className="mr-2 h-4 w-4" />
+                WhatsApp ile İletişim
+              </a>
+            </div>
+          </div>
+        </section>
+      </main>
     </div>
   )
 }

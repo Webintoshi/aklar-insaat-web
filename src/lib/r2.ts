@@ -35,7 +35,7 @@ export async function uploadToR2(
   // Yapılandırmayı kontrol et
   validateConfig()
 
-  const key = `uploads/${Date.now()}-${fileName}`
+  const key = `${Date.now()}-${fileName}`
 
   try {
     const upload = new Upload({

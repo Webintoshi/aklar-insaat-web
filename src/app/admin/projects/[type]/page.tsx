@@ -1,27 +1,96 @@
-import { createClient } from '@/lib/supabase/server'
-import { Plus, Edit, Trash2, Image } from 'lucide-react'
+'use client'
+
+import { useEffect, useState } from 'react'
+import { Plus, Edit, Trash2, Image, Loader2 } from 'lucide-react'
 import Link from 'next/link'
+import { createClient } from '@/lib/supabase/client'
 import { DeleteProjectButton } from '../_components/delete-project-button'
 
-async function getProjects(status: 'completed' | 'ongoing') {
-  const supabase = await createClient()
-  const { data } = await supabase
-    .from('projects')
-    .select('*, project_images(*)')
-    .eq('status', status)
-    .order('order_index', { ascending: true })
-  
-  return data || []
+interface Project {
+  id: string
+  name: string
+  title?: string
+  slug: string
+  location?: string
+  is_published: boolean
+  project_images?: { image_url: string }[]
 }
 
-interface ProjectsPageProps {
-  params: Promise<{ type: 'completed' | 'ongoing' }>
-}
-
-export default async function ProjectsPage({ params }: ProjectsPageProps) {
-  const { type } = await params
-  const projects = await getProjects(type)
+export default function ProjectsPage({ params }: { params: { type: 'completed' | 'ongoing' } }) {
+  const [projects, setProjects] = useState<Project[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const supabase = createClient()
+  const { type } = params
   const title = type === 'completed' ? 'Tamamlanmış Projeler' : 'Devam Eden Projeler'
+
+  useEffect(() => {
+    loadProjects()
+  }, [type])
+
+  async function loadProjects() {
+    setLoading(true)
+    setError(null)
+    
+    try {
+      // Önce projeleri çek
+      const { data: projectsData, error: projectsError } = await supabase
+        .from('projects')
+        .select('*')
+        .eq('project_status', type)
+        .order('created_at', { ascending: false })
+
+      if (projectsError) {
+        throw projectsError
+      }
+
+      // Sonra görselleri çek ve birleştir
+      const projectsWithImages = await Promise.all(
+        (projectsData || []).map(async (project) => {
+          const { data: images } = await supabase
+            .from('project_images')
+            .select('image_url')
+            .eq('project_id', project.id)
+            .limit(1)
+          
+          return {
+            ...project,
+            project_images: images || []
+          }
+        })
+      )
+
+      setProjects(projectsWithImages)
+    } catch (err: any) {
+      console.error('Error loading projects:', err)
+      setError(err.message || 'Projeler yüklenirken hata oluştu')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="bg-red-50 border border-red-200 rounded-xl p-6">
+        <h3 className="text-red-800 font-semibold mb-2">Hata</h3>
+        <p className="text-red-600">{error}</p>
+        <button 
+          onClick={loadProjects}
+          className="mt-4 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+        >
+          Tekrar Dene
+        </button>
+      </div>
+    )
+  }
 
   return (
     <div>
@@ -55,7 +124,7 @@ export default async function ProjectsPage({ params }: ProjectsPageProps) {
                 {project.project_images?.[0]?.image_url ? (
                   <img
                     src={project.project_images[0].image_url}
-                    alt={project.title}
+                    alt={project.name || project.title}
                     className="w-full h-full object-cover"
                   />
                 ) : (
@@ -74,15 +143,10 @@ export default async function ProjectsPage({ params }: ProjectsPageProps) {
               
               <div className="p-4">
                 <h3 className="text-lg font-semibold text-gray-800 mb-1">
-                  {project.title}
+                  {project.name || project.title}
                 </h3>
                 {project.location && (
                   <p className="text-sm text-gray-500 mb-2">{project.location}</p>
-                )}
-                {project.completion_date && (
-                  <p className="text-xs text-gray-400 mb-4">
-                    {new Date(project.completion_date).toLocaleDateString('tr-TR')}
-                  </p>
                 )}
                 
                 <div className="flex items-center justify-between pt-4 border-t border-gray-100">

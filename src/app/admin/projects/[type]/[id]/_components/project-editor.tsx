@@ -2,10 +2,9 @@
 
 import { useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
-import { createClient } from '@/lib/supabase/client'
-import { uploadToR2 } from '@/lib/r2'
-import { ArrowLeft, Loader2, Save, Upload, X, Image as ImageIcon } from 'lucide-react'
 import Link from 'next/link'
+import { createClient } from '@/lib/supabase/client'
+import { ArrowLeft, Loader2, Save, Upload, X, Image as ImageIcon, AlertCircle } from 'lucide-react'
 
 interface ProjectImage {
   id: string
@@ -16,13 +15,11 @@ interface ProjectImage {
 
 interface Project {
   id: string
-  title: string
+  name: string
   description: string | null
   status: string
   location: string | null
-  completion_date: string | null
   is_published: boolean
-  order_index: number
 }
 
 interface ProjectEditorProps {
@@ -37,59 +34,112 @@ export function ProjectEditor({ type, project, images = [] }: ProjectEditorProps
   const fileInputRef = useRef<HTMLInputElement>(null)
   
   const [loading, setLoading] = useState(false)
-  const [title, setTitle] = useState(project?.title || '')
+  const [name, setName] = useState(project?.name || '')
   const [description, setDescription] = useState(project?.description || '')
   const [location, setLocation] = useState(project?.location || '')
-  const [completionDate, setCompletionDate] = useState(project?.completion_date || '')
   const [isPublished, setIsPublished] = useState(project?.is_published || false)
   const [projectImages, setProjectImages] = useState<ProjectImage[]>(images)
   const [uploadingType, setUploadingType] = useState<'exterior' | 'interior' | 'location' | null>(null)
+  const [uploadProgress, setUploadProgress] = useState(0)
+  const [uploadError, setUploadError] = useState<string | null>(null)
 
-  const exteriorImages = projectImages.filter(img => img.image_type === 'exterior')
-  const interiorImages = projectImages.filter(img => img.image_type === 'interior')
-  const locationImages = projectImages.filter(img => img.image_type === 'location')
+  const exteriorImages = projectImages.filter((img) => img.image_type === 'exterior')
+  const interiorImages = projectImages.filter((img) => img.image_type === 'interior')
+  const locationImages = projectImages.filter((img) => img.image_type === 'location')
 
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, imageType: 'exterior' | 'interior' | 'location') => {
+  const handleFileUpload = async (
+    e: React.ChangeEvent<HTMLInputElement>,
+    imageType: 'exterior' | 'interior' | 'location'
+  ) => {
     const file = e.target.files?.[0]
-    if (!file) return
+    if (!file || !project) return
+
+    // Validasyon
+    if (!file.type.startsWith('image/')) {
+      setUploadError('Sadece görsel dosyaları yüklenebilir (JPG, PNG, WebP)')
+      return
+    }
+
+    if (file.size > 10 * 1024 * 1024) {
+      setUploadError('Dosya boyutu 10MB\'dan küçük olmalıdır')
+      return
+    }
 
     setUploadingType(imageType)
-    
+    setUploadError(null)
+    setUploadProgress(10)
+
     try {
-      const buffer = Buffer.from(await file.arrayBuffer())
-      const url = await uploadToR2(buffer, file.name, file.type)
+      // FormData oluştur
+      const formData = new FormData()
+      formData.append('file', file)
+      formData.append('folder', `projects/${project.id}/${imageType}`)
 
-      if (project) {
-        const { data } = await supabase
-          .from('project_images')
-          .insert({
-            project_id: project.id,
-            image_url: url,
-            image_type: imageType,
-          })
-          .select()
-          .single()
+      setUploadProgress(30)
 
-        if (data) {
-          setProjectImages([...projectImages, data])
-        }
+      // API'ye yükle (CORS sorunu olmadan)
+      const response = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData,
+      })
+
+      setUploadProgress(70)
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Yükleme hatası')
       }
-    } catch (error) {
+
+      const { url } = await response.json()
+
+      // Veritabanına kaydet
+      const { data: dbRecord, error: dbError } = await supabase
+        .from('project_images')
+        .insert({
+          project_id: project.id,
+          image_url: url,
+          image_type: imageType,
+        })
+        .select()
+        .single()
+
+      if (dbError) {
+        throw new Error(`Veritabanı hatası: ${dbError.message}`)
+      }
+
+      setUploadProgress(100)
+      setProjectImages((prev) => [...prev, dbRecord])
+
+    } catch (error: any) {
       console.error('Upload error:', error)
-      alert('Görsel yüklenirken hata oluştu.')
-    }
-    
-    setUploadingType(null)
-    if (fileInputRef.current) {
-      fileInputRef.current.value = ''
+      setUploadError(error.message || 'Yükleme sırasında hata oluştu')
+    } finally {
+      setUploadingType(null)
+      setUploadProgress(0)
+      if (fileInputRef.current) {
+        fileInputRef.current.value = ''
+      }
     }
   }
 
   const handleDeleteImage = async (imageId: string) => {
     if (!confirm('Bu görseli silmek istediğinizden emin misiniz?')) return
 
-    await supabase.from('project_images').delete().eq('id', imageId)
-    setProjectImages(projectImages.filter(img => img.id !== imageId))
+    try {
+      const { error } = await supabase
+        .from('project_images')
+        .delete()
+        .eq('id', imageId)
+
+      if (error) {
+        throw error
+      }
+
+      setProjectImages(projectImages.filter((img) => img.id !== imageId))
+    } catch (error: any) {
+      console.error('Delete error:', error)
+      alert('Görsel silinirken hata oluştu: ' + error.message)
+    }
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -98,50 +148,66 @@ export function ProjectEditor({ type, project, images = [] }: ProjectEditorProps
 
     try {
       if (project) {
-        await supabase
+        // Mevcut projeyi güncelle
+        const { error } = await supabase
           .from('projects')
           .update({
-            title,
+            name,
             description: description || null,
             location: location || null,
-            completion_date: completionDate || null,
             is_published: isPublished,
           })
           .eq('id', project.id)
+
+        if (error) throw error
+
+        router.push(`/admin/projects/${type}`)
       } else {
-        const { data } = await supabase
+        // Yeni proje oluştur
+        const slug = name
+          .toLowerCase()
+          .replace(/[ıİ]/g, 'i')
+          .replace(/[ğĞ]/g, 'g')
+          .replace(/[üÜ]/g, 'u')
+          .replace(/[şŞ]/g, 's')
+          .replace(/[öÖ]/g, 'o')
+          .replace(/[çÇ]/g, 'c')
+          .replace(/[^a-z0-9\s-]/g, '')
+          .replace(/\s+/g, '-')
+          .replace(/-+/g, '-')
+          .substring(0, 50)
+
+        const { data, error } = await supabase
           .from('projects')
           .insert({
-            title,
+            name,
             description: description || null,
-            status: type,
+            project_status: type,
+            status: 'published',
             location: location || null,
-            completion_date: completionDate || null,
             is_published: isPublished,
+            slug,
           })
           .select()
           .single()
 
-        if (data) {
-          router.push(`/admin/projects/${type}/${data.id}`)
-        }
+        if (error) throw error
+
+        router.push(`/admin/projects/${type}/${data.id}`)
       }
-      
-      if (!loading || project) {
-        router.push(`/admin/projects/${type}`)
-      }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Save error:', error)
+      alert('Kaydedilirken hata oluştu: ' + error.message)
+    } finally {
+      setLoading(false)
     }
-    
-    setLoading(false)
   }
 
-  const ImageUploadSection = ({ 
-    title, 
-    images, 
-    type 
-  }: { 
+  const ImageUploadSection = ({
+    title,
+    images,
+    type: sectionType,
+  }: {
     title: string
     images: ProjectImage[]
     type: 'exterior' | 'interior' | 'location'
@@ -149,7 +215,7 @@ export function ProjectEditor({ type, project, images = [] }: ProjectEditorProps
     <div className="border-2 border-dashed border-gray-300 rounded-xl p-4">
       <div className="flex items-center justify-between mb-4">
         <h3 className="font-medium text-gray-800">{title}</h3>
-        <label className="flex items-center px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg cursor-pointer transition-colors">
+        <label className="flex items-center px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg cursor-pointer transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
           <Upload className="w-4 h-4 mr-2" />
           Görsel Ekle
           <input
@@ -157,20 +223,38 @@ export function ProjectEditor({ type, project, images = [] }: ProjectEditorProps
             type="file"
             accept="image/*"
             className="hidden"
-            onChange={(e) => handleFileUpload(e, type)}
+            onChange={(e) => handleFileUpload(e, sectionType)}
             disabled={uploadingType !== null}
           />
         </label>
       </div>
-      
-      {uploadingType === type && (
-        <div className="flex items-center justify-center py-8">
-          <Loader2 className="w-6 h-6 animate-spin text-blue-600" />
-          <span className="ml-2 text-gray-600">Yükleniyor...</span>
+
+      {/* Upload Progress */}
+      {uploadingType === sectionType && uploadProgress > 0 && (
+        <div className="mb-4">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-sm text-gray-600">Yükleniyor...</span>
+            <span className="text-sm text-gray-600">{uploadProgress}%</span>
+          </div>
+          <div className="w-full bg-gray-200 rounded-full h-2">
+            <div
+              className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+              style={{ width: `${uploadProgress}%` }}
+            />
+          </div>
         </div>
       )}
 
-      {images.length === 0 && uploadingType !== type ? (
+      {/* Error Message */}
+      {uploadError && uploadingType === sectionType && (
+        <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg flex items-start">
+          <AlertCircle className="w-5 h-5 text-red-500 mr-2 flex-shrink-0 mt-0.5" />
+          <span className="text-sm text-red-700">{uploadError}</span>
+        </div>
+      )}
+
+      {/* Image Grid */}
+      {images.length === 0 && uploadingType !== sectionType ? (
         <div className="text-center py-8 text-gray-400">
           <ImageIcon className="w-8 h-8 mx-auto mb-2" />
           <p className="text-sm">Görsel eklenmemiş</p>
@@ -178,15 +262,21 @@ export function ProjectEditor({ type, project, images = [] }: ProjectEditorProps
       ) : (
         <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
           {images.map((img) => (
-            <div key={img.id} className="relative group aspect-video rounded-lg overflow-hidden bg-gray-100">
+            <div
+              key={img.id}
+              className="relative group aspect-video rounded-lg overflow-hidden bg-gray-100"
+            >
               <img
                 src={img.image_url}
                 alt=""
                 className="w-full h-full object-cover"
+                loading="lazy"
               />
               <button
+                type="button"
                 onClick={() => handleDeleteImage(img.id)}
                 className="absolute top-2 right-2 p-1 bg-red-600 text-white rounded-lg opacity-0 group-hover:opacity-100 transition-opacity"
+                disabled={uploadingType !== null}
               >
                 <X className="w-4 h-4" />
               </button>
@@ -214,9 +304,10 @@ export function ProjectEditor({ type, project, images = [] }: ProjectEditorProps
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
+        {/* Project Info Card */}
         <div className="bg-white rounded-xl shadow-sm p-6">
           <h2 className="text-lg font-semibold text-gray-800 mb-4">Proje Bilgileri</h2>
-          
+
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -224,8 +315,8 @@ export function ProjectEditor({ type, project, images = [] }: ProjectEditorProps
               </label>
               <input
                 type="text"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
+                value={name}
+                onChange={(e) => setName(e.target.value)}
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors"
                 required
               />
@@ -244,33 +335,17 @@ export function ProjectEditor({ type, project, images = [] }: ProjectEditorProps
               />
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Konum
-                </label>
-                <input
-                  type="text"
-                  value={location}
-                  onChange={(e) => setLocation(e.target.value)}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors"
-                  placeholder="Projenin konumu"
-                />
-              </div>
-
-              {type === 'completed' && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Tamamlanma Tarihi
-                  </label>
-                  <input
-                    type="date"
-                    value={completionDate}
-                    onChange={(e) => setCompletionDate(e.target.value)}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors"
-                  />
-                </div>
-              )}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Konum
+              </label>
+              <input
+                type="text"
+                value={location}
+                onChange={(e) => setLocation(e.target.value)}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors"
+                placeholder="Projenin konumu"
+              />
             </div>
 
             <div className="flex items-center">
@@ -288,6 +363,7 @@ export function ProjectEditor({ type, project, images = [] }: ProjectEditorProps
           </div>
         </div>
 
+        {/* Image Upload Sections */}
         {project && (
           <>
             <div className="bg-white rounded-xl shadow-sm p-6">
@@ -319,6 +395,7 @@ export function ProjectEditor({ type, project, images = [] }: ProjectEditorProps
           </>
         )}
 
+        {/* Submit Button */}
         <div className="flex justify-end">
           <button
             type="submit"
