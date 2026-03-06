@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import Image from 'next/image'
 import { useCallback, useEffect, useState } from 'react'
@@ -36,6 +36,8 @@ interface HeroSectionProps {
   }
 }
 
+const heroHeightClass = 'h-[240px] sm:h-[320px] md:h-[420px] lg:h-[560px] xl:h-[640px]'
+
 export function HeroSection({ data }: HeroSectionProps) {
   const {
     background_type,
@@ -44,9 +46,9 @@ export function HeroSection({ data }: HeroSectionProps) {
     autoplay = true,
     autoplay_speed = 5000,
   } = data
+
   const hasSrc = (value?: string | null) => Boolean(value && value.trim().length > 0)
 
-  // Slider için embla
   const [emblaRef, emblaApi] = useEmblaCarousel(
     { loop: true, align: 'start' },
     autoplay ? [Autoplay({ delay: autoplay_speed, stopOnInteraction: false })] : []
@@ -73,11 +75,9 @@ export function HeroSection({ data }: HeroSectionProps) {
     }
   }, [emblaApi, onSelect])
 
-  // Tek görsel modu
   if (background_type !== 'slider' || !slider_images || slider_images.length === 0) {
     return (
-      <section className="relative w-full aspect-[1920/800] min-h-[500px] max-h-[800px] overflow-hidden">
-        {/* Background Image */}
+      <section className={`relative w-full overflow-hidden ${heroHeightClass}`}>
         <div className="absolute inset-0 z-0">
           {hasSrc(background_image) ? (
             <Image
@@ -86,6 +86,7 @@ export function HeroSection({ data }: HeroSectionProps) {
               fill
               className="object-cover object-center"
               priority
+              fetchPriority="high"
               sizes="100vw"
             />
           ) : (
@@ -96,74 +97,68 @@ export function HeroSection({ data }: HeroSectionProps) {
     )
   }
 
-  // Slider modu
   return (
-    <section className="relative w-full aspect-[1920/800] min-h-[500px] max-h-[800px] overflow-hidden">
+    <section className={`relative w-full overflow-hidden ${heroHeightClass}`}>
       <div className="overflow-hidden h-full" ref={emblaRef}>
         <div className="flex h-full">
           {slider_images.map((slide, index) => (
             <div key={slide.id} className="flex-[0_0_100%] min-w-0 relative h-full">
-              {/* Slide Background */}
               <div className="absolute inset-0">
-                {/* Mobil görsel (md'den küçük ekranlar) */}
-                {hasSrc(slide.mobile_image) && (
+                {hasSrc(slide.image) ? (
+                  <Image
+                    src={slide.image}
+                    alt={slide.title || `Slide ${index + 1}`}
+                    fill
+                    className="object-cover object-center"
+                    priority={index === 0}
+                    fetchPriority={index === 0 ? 'high' : undefined}
+                    sizes="100vw"
+                  />
+                ) : (
+                  <div className="h-full w-full bg-gradient-to-br from-[#0F1D2F] via-[#1E3A5F] to-[#2E5A8F]" />
+                )}
+
+                {hasSrc(slide.mobile_image) ? (
                   <Image
                     src={slide.mobile_image as string}
                     alt={slide.title || `Slide ${index + 1}`}
                     fill
                     className="object-cover object-center md:hidden"
                     priority={index === 0}
+                    fetchPriority={index === 0 ? 'high' : undefined}
                     sizes="100vw"
                   />
-                )}
-                {/* Desktop görsel */}
-                {hasSrc(slide.image) ? (
-                  <Image
-                    src={slide.image}
-                    alt={slide.title || `Slide ${index + 1}`}
-                    fill
-                    className={`object-cover object-center ${slide.mobile_image ? 'hidden md:block' : ''}`}
-                    priority={index === 0}
-                    sizes="100vw"
-                  />
-                ) : (
-                  <div className="h-full w-full bg-gradient-to-br from-[#0F1D2F] via-[#1E3A5F] to-[#2E5A8F]" />
-                )}
-                <div className="absolute inset-0 bg-gradient-to-l from-white/30 via-transparent to-transparent" />
-              </div>
+                ) : null}
 
-              {/* Slide Content - Removed text overlays, images only */}
+                <div className="absolute inset-0 bg-gradient-to-l from-white/25 via-transparent to-transparent" />
+              </div>
             </div>
           ))}
         </div>
       </div>
 
-      {/* Navigation Arrows */}
       <button
         onClick={scrollPrev}
-        className="absolute left-4 md:left-8 top-1/2 -translate-y-1/2 z-20 w-12 h-12 bg-white/80 hover:bg-white rounded-full flex items-center justify-center shadow-lg transition-all hover:scale-110"
+        className="absolute left-3 md:left-8 top-1/2 -translate-y-1/2 z-20 h-10 w-10 md:h-12 md:w-12 bg-white/85 hover:bg-white rounded-full flex items-center justify-center shadow-lg transition-all hover:scale-105"
         aria-label="Önceki slide"
       >
-        <ChevronLeft className="w-6 h-6 text-gray-800" />
+        <ChevronLeft className="w-5 h-5 md:w-6 md:h-6 text-gray-800" />
       </button>
       <button
         onClick={scrollNext}
-        className="absolute right-4 md:right-8 top-1/2 -translate-y-1/2 z-20 w-12 h-12 bg-white/80 hover:bg-white rounded-full flex items-center justify-center shadow-lg transition-all hover:scale-110"
+        className="absolute right-3 md:right-8 top-1/2 -translate-y-1/2 z-20 h-10 w-10 md:h-12 md:w-12 bg-white/85 hover:bg-white rounded-full flex items-center justify-center shadow-lg transition-all hover:scale-105"
         aria-label="Sonraki slide"
       >
-        <ChevronRight className="w-6 h-6 text-gray-800" />
+        <ChevronRight className="w-5 h-5 md:w-6 md:h-6 text-gray-800" />
       </button>
 
-      {/* Pagination Dots */}
-      <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-20 flex gap-3">
+      <div className="absolute bottom-4 md:bottom-8 left-1/2 -translate-x-1/2 z-20 flex gap-2 md:gap-3">
         {scrollSnaps.map((_, index) => (
           <button
             key={index}
             onClick={() => scrollTo(index)}
-            className={`w-3 h-3 rounded-full transition-all duration-300 ${
-              index === selectedIndex
-                ? 'bg-[#1E3A5F] w-8'
-                : 'bg-white/70 hover:bg-white'
+            className={`h-2.5 rounded-full transition-all duration-300 ${
+              index === selectedIndex ? 'bg-[#1E3A5F] w-7 md:w-8' : 'w-2.5 bg-white/70 hover:bg-white'
             }`}
             aria-label={`Slide ${index + 1}`}
           />

@@ -1,6 +1,7 @@
-import { createClient } from '@/lib/supabase/server'
-import { notFound } from 'next/navigation'
+﻿import { createClient } from '@/lib/supabase/server'
+import Image from 'next/image'
 import Link from 'next/link'
+import { notFound } from 'next/navigation'
 import { ArrowLeft, MapPin, Building2, CheckCircle2, Clock3, PhoneCall, ChevronRight } from 'lucide-react'
 import { MediaGallerySection } from './MediaGallerySection'
 
@@ -85,7 +86,7 @@ function StatusBadge({ status }: { status: ProjectRecord['project_status'] }) {
     return (
       <span className="inline-flex items-center gap-2 rounded-full bg-blue-600/10 px-4 py-2 text-sm font-semibold text-blue-700">
         <CheckCircle2 className="h-4 w-4" />
-        Tamamlandi
+        Tamamlandı
       </span>
     )
   }
@@ -118,7 +119,7 @@ export default async function ProjeDetayPage({ params }: { params: Promise<Route
     <div className="min-h-screen bg-[#f5f7fa]">
       <section className="relative overflow-hidden bg-gradient-to-br from-[#0f1d2f] via-[#1E3A5F] to-[#2E5A8F] text-white">
         <div className="absolute inset-0 opacity-15">
-          {aboutImage ? <img src={aboutImage} alt="" className="h-full w-full object-cover" /> : null}
+          {aboutImage ? <Image src={aboutImage} alt="" fill className="object-cover" sizes="100vw" priority /> : null}
         </div>
         <div className="container mx-auto px-4 py-10 lg:py-14 relative z-10">
           <Link href="/projeler" className="mb-8 inline-flex items-center text-white/85 transition hover:text-white">
@@ -137,14 +138,14 @@ export default async function ProjeDetayPage({ params }: { params: Promise<Route
 
             <div className="lg:col-span-4">
               <div className="rounded-2xl border border-white/25 bg-white/10 p-6 backdrop-blur-md">
-                <p className="text-xs uppercase tracking-[0.18em] text-white/70">Hizli Bilgi</p>
-                <p className="mt-3 text-2xl font-semibold">{project.apartment_options || 'Daire secenekleri yakinda'}</p>
-                <p className="mt-2 text-white/80">{project.neighborhood || 'Konum bilgisi guncelleniyor'}</p>
+                <p className="text-xs uppercase tracking-[0.18em] text-white/70">Hızlı Bilgi</p>
+                <p className="mt-3 text-2xl font-semibold">{project.apartment_options || 'Daire seçenekleri yakında'}</p>
+                <p className="mt-2 text-white/80">{project.neighborhood || 'Konum bilgisi güncelleniyor'}</p>
                 <a
                   href="#konum"
                   className="mt-6 inline-flex items-center rounded-xl bg-[#CF000C] px-5 py-3 text-sm font-semibold transition hover:bg-[#990000]"
                 >
-                  {project.cta_text || 'Konumu Incele'}
+                  {project.cta_text || 'Konumu İncele'}
                   <ChevronRight className="ml-1 h-4 w-4" />
                 </a>
               </div>
@@ -157,7 +158,9 @@ export default async function ProjeDetayPage({ params }: { params: Promise<Route
         <section className="grid gap-8 lg:grid-cols-12">
           <div className="lg:col-span-7 overflow-hidden rounded-3xl bg-white shadow-xl">
             {aboutImage ? (
-              <img src={aboutImage} alt={projectName} className="h-full min-h-[300px] w-full object-cover" />
+              <div className="relative h-full min-h-[300px] w-full">
+                <Image src={aboutImage} alt={projectName} fill className="object-cover" sizes="(max-width: 1024px) 100vw, 58vw" />
+              </div>
             ) : (
               <div className="flex min-h-[300px] items-center justify-center bg-gray-100 text-gray-300">
                 <Building2 className="h-16 w-16" />
@@ -200,7 +203,9 @@ export default async function ProjeDetayPage({ params }: { params: Promise<Route
         <section id="konum" className="grid gap-8 lg:grid-cols-12">
           <div className="lg:col-span-7 overflow-hidden rounded-3xl bg-white shadow-xl">
             {locationImage ? (
-              <img src={locationImage} alt={`${projectName} konum`} className="h-full min-h-[320px] w-full object-cover" />
+              <div className="relative h-full min-h-[320px] w-full">
+                <Image src={locationImage} alt={`${projectName} konum`} fill className="object-cover" sizes="(max-width: 1024px) 100vw, 58vw" />
+              </div>
             ) : (
               <div className="flex min-h-[320px] items-center justify-center bg-gray-100 text-gray-300">
                 <MapPin className="h-16 w-16" />

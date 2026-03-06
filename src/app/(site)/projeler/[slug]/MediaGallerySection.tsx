@@ -1,5 +1,6 @@
-'use client'
+﻿'use client'
 
+import Image from 'next/image'
 import { useCallback, useEffect, useState } from 'react'
 import useEmblaCarousel from 'embla-carousel-react'
 import { ChevronLeft, ChevronRight, X } from 'lucide-react'
@@ -75,11 +76,16 @@ export function MediaGallerySection({ title, projectName, imageType, images }: M
               onClick={() => openLightbox(index)}
               className="group overflow-hidden rounded-2xl bg-white shadow-lg text-left"
             >
-              <img
-                src={image.url}
-                alt={`${projectName} ${imageType} ${index + 1}`}
-                className="aspect-[3/4] w-full object-cover transition duration-500 group-hover:scale-105"
-              />
+              <div className="relative aspect-[3/4] w-full">
+                <Image
+                  src={image.url}
+                  alt={`${projectName} ${imageType} ${index + 1}`}
+                  fill
+                  loading="lazy"
+                  sizes="(max-width: 768px) 50vw, (max-width: 1280px) 33vw, 25vw"
+                  className="object-cover transition duration-500 group-hover:scale-105"
+                />
+              </div>
             </button>
           ))}
         </div>
@@ -94,11 +100,16 @@ export function MediaGallerySection({ title, projectName, imageType, images }: M
                   onClick={() => openLightbox(index)}
                   className="min-w-0 flex-[0_0_78%] sm:flex-[0_0_48%] lg:flex-[0_0_31%] xl:flex-[0_0_24%] group overflow-hidden rounded-2xl bg-white shadow-lg text-left"
                 >
-                  <img
-                    src={image.url}
-                    alt={`${projectName} ${imageType} ${index + 1}`}
-                    className="aspect-[3/4] w-full object-cover transition duration-500 group-hover:scale-105"
-                  />
+                  <div className="relative aspect-[3/4] w-full">
+                    <Image
+                      src={image.url}
+                      alt={`${projectName} ${imageType} ${index + 1}`}
+                      fill
+                      loading="lazy"
+                      sizes="(max-width: 640px) 78vw, (max-width: 1024px) 48vw, (max-width: 1280px) 31vw, 24vw"
+                      className="object-cover transition duration-500 group-hover:scale-105"
+                    />
+                  </div>
                 </button>
               ))}
             </div>
@@ -153,12 +164,16 @@ export function MediaGallerySection({ title, projectName, imageType, images }: M
             <ChevronLeft className="h-6 w-6" />
           </button>
 
-          <img
-            src={images[lightboxIndex].url}
-            alt={`${projectName} ${imageType} ${lightboxIndex + 1}`}
-            className="max-h-[90vh] max-w-[92vw] rounded-xl object-contain"
-            onClick={(e) => e.stopPropagation()}
-          />
+          <div className="relative h-[90vh] w-[92vw]" onClick={(e) => e.stopPropagation()}>
+            <Image
+              src={images[lightboxIndex].url}
+              alt={`${projectName} ${imageType} ${lightboxIndex + 1}`}
+              fill
+              className="rounded-xl object-contain"
+              sizes="92vw"
+              priority
+            />
+          </div>
 
           <button
             type="button"

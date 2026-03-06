@@ -1,21 +1,22 @@
-'use client'
+﻿'use client'
 
-import { useState, useEffect } from 'react'
+import Image from 'next/image'
 import Link from 'next/link'
+import { useEffect, useState } from 'react'
 import { Menu, X, Phone, ChevronDown, Instagram, LayoutGrid } from 'lucide-react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { AnimatePresence, motion } from 'framer-motion'
 
 const navLinks = [
   { label: 'ANASAYFA', href: '/' },
   { label: 'KURUMSAL', href: '/kurumsal' },
   { label: 'TAAHHÜT', href: '/taahhut' },
-  { 
-    label: 'PROJELER', 
+  {
+    label: 'PROJELER',
     href: '/projeler',
     dropdown: [
       { label: 'Tamamlanan Projeler', href: '/projeler?status=completed' },
       { label: 'Devam Eden Projeler', href: '/projeler?status=ongoing' },
-    ]
+    ],
   },
   { label: 'İLETİŞİM', href: '/iletisim' },
 ]
@@ -33,25 +34,35 @@ export function Header({ phone = '0545 727 72 97' }: HeaderProps) {
     const handleScroll = () => {
       setIsScrolled(window.scrollY > 50)
     }
+
     window.addEventListener('scroll', handleScroll)
     return () => window.removeEventListener('scroll', handleScroll)
   }, [])
 
   return (
     <>
-      {/* TopBar - Sadece iletişim bilgileri */}
-      <div className={`fixed top-0 left-0 right-0 z-50 bg-gray-100 border-b border-gray-200 transition-all duration-300 ${isScrolled ? 'h-0 opacity-0 overflow-hidden' : 'h-10 opacity-100'}`}>
+      <div
+        className={`fixed top-0 left-0 right-0 z-50 bg-gray-100 border-b border-gray-200 transition-all duration-300 ${
+          isScrolled ? 'h-0 opacity-0 overflow-hidden' : 'h-10 opacity-100'
+        }`}
+      >
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 xl:px-12 h-full">
           <div className="flex items-center justify-between h-full">
-            {/* Sol: Sosyal Medya */}
             <div className="flex items-center gap-4">
-              <a href="https://www.instagram.com/aklarinsaat.ordu/" target="_blank" rel="noopener noreferrer" className="text-gray-600 hover:text-[#CF000C] transition-colors">
+              <a
+                href="https://www.instagram.com/aklarinsaat.ordu/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-gray-600 hover:text-[#CF000C] transition-colors"
+              >
                 <Instagram className="w-4 h-4" />
               </a>
             </div>
 
-            {/* Sağ: Telefon */}
-            <a href={`tel:${phone.replace(/\s/g, '')}`} className="flex items-center gap-2 text-sm text-gray-700 hover:text-[#CF000C] transition-colors">
+            <a
+              href={`tel:${phone.replace(/\s/g, '')}`}
+              className="flex items-center gap-2 text-sm text-gray-700 hover:text-[#CF000C] transition-colors"
+            >
               <Phone className="w-4 h-4" />
               <span>{phone}</span>
             </a>
@@ -59,30 +70,33 @@ export function Header({ phone = '0545 727 72 97' }: HeaderProps) {
         </div>
       </div>
 
-      {/* Main Header */}
       <motion.header
         initial={{ y: -100 }}
         animate={{ y: 0 }}
-        transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+        transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
         className={`fixed left-0 right-0 z-50 transition-all duration-300 ${
           isScrolled ? 'top-0 bg-white/95 backdrop-blur-md shadow-lg' : 'top-10 bg-white'
         }`}
       >
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
           <div className={`flex items-center justify-between transition-all duration-300 ${isScrolled ? 'h-16' : 'h-20'}`}>
-            {/* Logo */}
-            <Link href="/" className="flex items-center gap-2">
-              <img 
-                src="/logoypng_48.png" 
-                alt="Aklar İnşaat" 
-                className={`w-auto object-contain transition-all duration-300 ${isScrolled ? 'h-8' : 'h-10'}`}
+            <Link href="/" className="flex items-center">
+              <Image
+                src="/logoypng_48.png"
+                alt="Aklar İnşaat"
+                width={420}
+                height={86}
+                priority
+                sizes="(max-width: 640px) 220px, 360px"
+                className={`h-auto w-auto max-w-[220px] object-contain transition-all duration-300 sm:max-w-[260px] md:max-w-[300px] ${
+                  isScrolled ? 'max-h-8 sm:max-h-9' : 'max-h-10 sm:max-h-12'
+                }`}
               />
             </Link>
 
-            {/* Desktop Navigation */}
             <nav className="hidden lg:flex items-center gap-8">
               {navLinks.map((link) => (
-                <div 
+                <div
                   key={link.href}
                   className="relative"
                   onMouseEnter={() => link.dropdown && setOpenDropdown(link.label)}
@@ -95,8 +109,7 @@ export function Header({ phone = '0545 727 72 97' }: HeaderProps) {
                     {link.label}
                     {link.dropdown && <ChevronDown className="w-4 h-4" />}
                   </Link>
-                  
-                  {/* Dropdown */}
+
                   <AnimatePresence>
                     {link.dropdown && openDropdown === link.label && (
                       <motion.div
@@ -121,9 +134,7 @@ export function Header({ phone = '0545 727 72 97' }: HeaderProps) {
               ))}
             </nav>
 
-            {/* Right Side - Sadece CTA Button */}
             <div className="flex items-center gap-4">
-              {/* CTA Button */}
               <Link
                 href="/daire-secimi"
                 className="hidden sm:flex items-center gap-2 px-5 py-2.5 bg-[#CF000C] text-white text-sm font-semibold rounded hover:bg-[#a8000a] transition-colors"
@@ -132,7 +143,6 @@ export function Header({ phone = '0545 727 72 97' }: HeaderProps) {
                 Daire Seçimi
               </Link>
 
-              {/* Mobile Menu Button */}
               <button
                 onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
                 className="lg:hidden p-2 rounded-lg text-gray-800 transition-colors"
@@ -144,15 +154,9 @@ export function Header({ phone = '0545 727 72 97' }: HeaderProps) {
         </div>
       </motion.header>
 
-      {/* Mobile Menu */}
       <AnimatePresence>
         {isMobileMenuOpen && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-40 lg:hidden"
-          >
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-40 lg:hidden">
             <div className="absolute inset-0 bg-black/50" onClick={() => setIsMobileMenuOpen(false)} />
             <motion.nav
               initial={{ x: '100%' }}
@@ -166,7 +170,7 @@ export function Header({ phone = '0545 727 72 97' }: HeaderProps) {
                   <Phone className="w-5 h-5 text-[#CF000C]" />
                   <span className="font-semibold text-gray-800">{phone}</span>
                 </div>
-                
+
                 <ul className="space-y-1">
                   {navLinks.map((link) => (
                     <li key={link.href}>
@@ -194,7 +198,7 @@ export function Header({ phone = '0545 727 72 97' }: HeaderProps) {
                     </li>
                   ))}
                 </ul>
-                
+
                 <div className="mt-8 pt-8 border-t border-gray-200">
                   <Link
                     href="/daire-secimi"
