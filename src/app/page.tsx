@@ -1,16 +1,16 @@
 import { getHomePageData, getFooterSettings } from '@/lib/api/frontend-data'
-import { HeroSection } from './(site)/_sections/HeroSection'
+import { Header } from './(site)/_components/Header'
 import { AboutSection } from './(site)/_sections/AboutSection'
+import { Footer } from './(site)/_sections/Footer'
+import { HeroSection } from './(site)/_sections/HeroSection'
+import { InfoCardsSection } from './(site)/_sections/InfoCardsSection'
 import { ProjectsSection } from './(site)/_sections/ProjectsSection'
 import { VideoSection } from './(site)/_sections/VideoSection'
-import { InfoCardsSection } from './(site)/_sections/InfoCardsSection'
-import { Footer } from './(site)/_sections/Footer'
-import { Header } from './(site)/_components/Header'
 
 export default async function HomePage() {
   const data = await getHomePageData()
   const footerData = await getFooterSettings()
-  
+
   return (
     <>
       <Header />
