@@ -1,15 +1,16 @@
 'use client'
 
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { ArrowLeft, Loader2, Save } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 
-export default function NewProjectPage({ params }: { params: { type: 'completed' | 'ongoing' } }) {
+export default function NewProjectPage() {
   const router = useRouter()
+  const params = useParams<{ type: 'completed' | 'ongoing' }>()
   const supabase = createClient()
-  const { type } = params
+  const type = params?.type || 'ongoing'
   
   const [loading, setLoading] = useState(false)
   const [name, setName] = useState('')

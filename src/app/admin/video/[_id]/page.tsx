@@ -22,10 +22,14 @@ interface VideoSection {
   autoplay: boolean
 }
 
-export default function VideoEditorPage() {
+interface VideoEditorPageProps {
+  forcedVideoId?: string
+}
+
+export default function VideoEditorPage({ forcedVideoId }: VideoEditorPageProps = {}) {
   const router = useRouter()
   const params = useParams<{ _id: string }>()
-  const videoIdParam = params?._id
+  const videoIdParam = forcedVideoId || params?._id
   const supabase = createClient()
   const isNew = videoIdParam === 'new'
 

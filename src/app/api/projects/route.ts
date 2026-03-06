@@ -2,8 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 
 function isSchemaCacheTableMissingError(error: unknown): boolean {
-  const message = String(error?.message || "").toLowerCase();
-  const code = String(error?.code || "");
+  const normalizedError = error && typeof error === "object" ? error as { message?: string; code?: string } : {};
+  const message = String(normalizedError.message || "").toLowerCase();
+  const code = String(normalizedError.code || "");
   return code === "PGRST205" || (message.includes("schema cache") && message.includes("projects"));
 }
 

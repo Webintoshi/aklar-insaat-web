@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import { useParams, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { ArrowLeft, Loader2, Plus, Trash2, GripVertical, Save } from 'lucide-react'
 import Link from 'next/link'
@@ -23,8 +23,10 @@ const iconOptions = [
   'Star', 'Heart', 'Clock', 'Calendar', 'MapPin', 'Phone', 'Mail'
 ]
 
-export default function CardsManagerPage({ params }: { params: { _id: string } }) {
+export default function CardsManagerPage() {
   const router = useRouter()
+  const params = useParams<{ _id: string }>()
+  const sectionId = params?._id
   const supabase = createClient()
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
@@ -33,12 +35,14 @@ export default function CardsManagerPage({ params }: { params: { _id: string } }
 
   useEffect(() => {
     fetchData()
-  }, [])
+  }, [sectionId])
 
   const fetchData = async () => {
+    if (!sectionId) return
+
     const [{ data: section }, { data: cardsData }] = await Promise.all([
-      supabase.from('info_cards_sections').select('name').eq('id', params._id).single(),
-      supabase.from('info_cards').select('*').eq('section_id', params._id).order('order_index', { ascending: true }),
+      supabase.from('info_cards_sections').select('name').eq('id', sectionId).single(),
+      supabase.from('info_cards').select('*').eq('section_id', sectionId).order('order_index', { ascending: true }),
     ])
     
     if (section) setSectionName(section.name)
@@ -48,7 +52,7 @@ export default function CardsManagerPage({ params }: { params: { _id: string } }
 
   const addCard = () => {
     const newCard = {
-      section_id: params._id,
+      section_id: sectionId,
       icon: 'Building',
       title: '',
       value: '',
@@ -74,11 +78,13 @@ export default function CardsManagerPage({ params }: { params: { _id: string } }
   }
 
   const handleSave = async () => {
+    if (!sectionId) return
+
     setSaving(true)
     
     for (const card of cards) {
       const payload = {
-        section_id: params._id,
+        section_id: sectionId,
         icon: card.icon,
         title: card.title,
         value: card.value,

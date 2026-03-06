@@ -35,10 +35,14 @@ const iconOptions = [
   'CheckCircle', 'TrendingUp', 'MapPin', 'Phone', 'Mail', 'Calendar',
 ]
 
-export default function AboutEditorPage() {
+interface AboutEditorPageProps {
+  forcedAboutId?: string
+}
+
+export default function AboutEditorPage({ forcedAboutId }: AboutEditorPageProps = {}) {
   const router = useRouter()
   const params = useParams<{ _id: string }>()
-  const aboutId = params?._id
+  const aboutId = forcedAboutId || params?._id
   const supabase = createClient()
   const isNew = aboutId === 'new'
 

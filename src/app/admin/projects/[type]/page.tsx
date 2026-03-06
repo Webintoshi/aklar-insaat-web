@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { useParams } from 'next/navigation'
 import { Plus, Edit, Trash2, Image, Loader2 } from 'lucide-react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
@@ -16,12 +17,13 @@ interface Project {
   project_images?: { image_url: string }[]
 }
 
-export default function ProjectsPage({ params }: { params: { type: 'completed' | 'ongoing' } }) {
+export default function ProjectsPage() {
   const [projects, setProjects] = useState<Project[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const supabase = createClient()
-  const { type } = params
+  const params = useParams<{ type: 'completed' | 'ongoing' }>()
+  const type = params?.type || 'ongoing'
   const title = type === 'completed' ? 'Tamamlanmış Projeler' : 'Devam Eden Projeler'
 
   useEffect(() => {

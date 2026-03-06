@@ -336,11 +336,12 @@ export async function getAboutSection(): Promise<AboutSection> {
 
   if (!data) return defaultAbout
 
-  const parsedParagraphs = Array.isArray((data as { paragraphs?: unknown }).paragraphs)
-    ? ((data as { paragraphs?: unknown[] }).paragraphs
-      .filter((p): p is string => typeof p === 'string')
-      .map((p) => p.trim())
-      .filter(Boolean))
+  const rawParagraphs = (data as { paragraphs?: unknown }).paragraphs
+  const parsedParagraphs = Array.isArray(rawParagraphs)
+    ? rawParagraphs
+        .filter((p): p is string => typeof p === 'string')
+        .map((p) => p.trim())
+        .filter(Boolean)
     : []
 
   const descriptionText = (data as { description?: string | null }).description?.trim()

@@ -54,9 +54,3 @@ export async function POST(request: NextRequest) {
 }
 
 // Boyut limitini artır
-export const config = {
-  api: {
-    bodyParser: false,
-    responseLimit: '10mb',
-  },
-}

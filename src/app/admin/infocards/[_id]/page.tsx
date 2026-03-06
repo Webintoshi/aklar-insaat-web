@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import { useParams, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { ArrowLeft, Loader2, Save } from 'lucide-react'
 import Link from 'next/link'
@@ -19,10 +19,16 @@ interface InfoCardsSection {
   show_dots: boolean
 }
 
-export default function InfoCardsEditorPage({ params }: { params: { _id: string } }) {
+interface InfoCardsEditorPageProps {
+  forcedSectionId?: string
+}
+
+export default function InfoCardsEditorPage({ forcedSectionId }: InfoCardsEditorPageProps = {}) {
   const router = useRouter()
+  const params = useParams<{ _id: string }>()
+  const sectionId = forcedSectionId || params?._id
   const supabase = createClient()
-  const isNew = params._id === 'new'
+  const isNew = sectionId === 'new'
   
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -49,7 +55,7 @@ export default function InfoCardsEditorPage({ params }: { params: { _id: string 
     const { data: section } = await supabase
       .from('info_cards_sections')
       .select('*')
-      .eq('id', params._id)
+      .eq('id', sectionId)
       .single()
     
     if (section) {
@@ -73,7 +79,7 @@ export default function InfoCardsEditorPage({ params }: { params: { _id: string 
         router.push(`/admin/infocards/${newSection.id}/cards`)
       }
     } else {
-      const { error } = await supabase.from('info_cards_sections').update(data).eq('id', params._id)
+      const { error } = await supabase.from('info_cards_sections').update(data).eq('id', sectionId)
       if (!error) router.push('/admin/infocards')
     }
     
@@ -214,7 +220,7 @@ export default function InfoCardsEditorPage({ params }: { params: { _id: string 
         <div className="flex justify-between">
           {!isNew && (
             <Link
-              href={`/admin/infocards/${params._id}/cards`}
+              href={`/admin/infocards/${sectionId}/cards`}
               className="px-6 py-3 text-blue-600 font-medium hover:bg-blue-50 rounded-lg transition-colors"
             >
               Kartları Düzenle →
