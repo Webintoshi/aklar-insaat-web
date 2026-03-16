@@ -25,7 +25,7 @@ interface HeaderProps {
   phone?: string
 }
 
-export function Header({ phone = '0545 727 72 97' }: HeaderProps) {
+export function Header({ phone = '0532 762 42 67' }: HeaderProps) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [openDropdown, setOpenDropdown] = useState<string | null>(null)
 

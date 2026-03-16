@@ -228,9 +228,9 @@ const defaultFooter: FooterSettings = {
   ],
   contact_info: {
     address: 'ŞİRİNEVLER MAH ZÜBEYDE HANIM CAD NO:243/A Ordu/ALTINORDU',
-    phone: '0545 727 72 97',
+    phone: '0532 762 42 67',
     email: 'aklarinsaat@outlook.com',
-    working_hours: 'Pzt-Cum: 09:00 - 18:00',
+    working_hours: '08:00 - 19:00',
   },
   copyright_text: '© 2024 Aklar İnşaat. Tüm hakları saklıdır.',
   legal_links: [
@@ -498,8 +498,22 @@ export async function getFooterSettings(): Promise<FooterSettings> {
     .eq('is_active', true)
     .limit(1)
     .single()
-  
-  return data || defaultFooter
+
+  const footer = (data || defaultFooter) as FooterSettings
+  const rawPhone = footer.contact_info?.phone?.trim() || defaultFooter.contact_info.phone
+  const rawWorkingHours = footer.contact_info?.working_hours?.trim() || defaultFooter.contact_info.working_hours
+
+  return {
+    ...footer,
+    contact_info: {
+      ...footer.contact_info,
+      phone: rawPhone === '0545 727 72 97' ? defaultFooter.contact_info.phone : rawPhone,
+      working_hours:
+        rawWorkingHours === '09:00-18:00' || rawWorkingHours === 'Pzt-Cum: 09:00 - 18:00'
+          ? defaultFooter.contact_info.working_hours
+          : rawWorkingHours,
+    },
+  }
 }
 
 export interface HomePageData {

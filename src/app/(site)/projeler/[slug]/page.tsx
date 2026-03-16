@@ -230,7 +230,7 @@ export default async function ProjeDetayPage({ params }: { params: Promise<Route
               <p className="font-semibold text-[#0F1D2F]">Detaylı Bilgi Alın</p>
               <p className="mt-2 text-sm text-gray-700">Satış ekibimizle hemen görüşüp fiyat ve ödeme planlarını öğrenin.</p>
               <a
-                href="https://wa.me/905457277297?text=Merhaba, proje hakkında detaylı bilgi almak istiyorum."
+                href="https://wa.me/905327624267?text=Merhaba, proje hakkında detaylı bilgi almak istiyorum."
                 target="_blank"
                 rel="noopener noreferrer"
                 className="mt-4 inline-flex items-center rounded-xl bg-[#25D366] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#128C7E]"

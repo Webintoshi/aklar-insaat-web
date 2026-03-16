@@ -44,20 +44,25 @@ const defaultQuickLinks = [
 ]
 
 const defaultContact = {
-  phone: '0545 727 72 97',
+  phone: '0532 762 42 67',
   email: 'aklarinsaat@outlook.com',
   address: 'ŞİRİNEVLER MAH ZÜBEYDE HANIM CAD NO:243/A',
-  working_hours: '09:00-18:00',
+  working_hours: '08:00-19:00',
 }
 
 export function Footer({ data }: FooterProps) {
   const { description, social_links, quick_links, contact_info, copyright_text, legal_links } = data
   const currentYear = new Date().getFullYear()
   const linksToShow = quick_links?.length ? quick_links : defaultQuickLinks
-  const phone = contact_info?.phone?.trim() || defaultContact.phone
+  const rawPhone = contact_info?.phone?.trim() || defaultContact.phone
+  const phone = rawPhone === '0545 727 72 97' ? defaultContact.phone : rawPhone
   const email = contact_info?.email?.trim() || defaultContact.email
   const address = contact_info?.address?.trim() || defaultContact.address
-  const workingHours = contact_info?.working_hours?.trim() || defaultContact.working_hours
+  const rawWorkingHours = contact_info?.working_hours?.trim() || defaultContact.working_hours
+  const workingHours =
+    rawWorkingHours === '09:00-18:00' || rawWorkingHours === 'Pzt-Cum: 09:00 - 18:00'
+      ? defaultContact.working_hours
+      : rawWorkingHours
 
   return (
     <footer className="relative overflow-hidden border-t border-[#CF000C]/70 bg-[#0b1322] text-white">

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import Link from 'next/link'
 import { motion } from 'framer-motion'
 import { 
   MapPin, 
@@ -29,9 +30,9 @@ const contactInfo = [
   {
     icon: Phone,
     title: 'Telefon',
-    content: '0545 727 72 97',
-    subContent: 'Hafta içi 09:00 - 18:00',
-    href: 'tel:05457277297',
+    content: '0532 762 42 67',
+    subContent: '08:00 - 19:00',
+    href: 'tel:05327624267',
     color: 'from-blue-500 to-cyan-600'
   },
   {
@@ -101,7 +102,7 @@ export default function IletisimPage() {
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 xl:px-12 relative z-10">
           <div className="max-w-3xl">
             <nav className="flex items-center gap-2 text-sm text-white/60 mb-6">
-              <a href="/" className="hover:text-white transition-colors">Anasayfa</a>
+              <Link href="/" className="hover:text-white transition-colors">Anasayfa</Link>
               <span>/</span>
               <span className="text-white">İletişim</span>
             </nav>
@@ -223,11 +224,11 @@ export default function IletisimPage() {
                 <div className="space-y-2 text-sm">
                   <div className="flex justify-between">
                     <span className="text-slate-600">Pazartesi - Cuma</span>
-                    <span className="font-medium text-slate-800">09:00 - 18:00</span>
+                    <span className="font-medium text-slate-800">08:00 - 19:00</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-slate-600">Cumartesi</span>
-                    <span className="font-medium text-slate-800">10:00 - 14:00</span>
+                    <span className="font-medium text-slate-800">08:00 - 19:00</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-slate-600">Pazar</span>

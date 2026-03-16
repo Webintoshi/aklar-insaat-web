@@ -1,13 +1,12 @@
 'use client'
 
-import Link from 'next/link'
 import { Phone, Instagram } from 'lucide-react'
 
 interface TopBarProps {
   phone?: string
 }
 
-export function TopBar({ phone = '0545 727 72 97' }: TopBarProps) {
+export function TopBar({ phone = '0532 762 42 67' }: TopBarProps) {
   return (
     <div className="bg-white border-b border-gray-100">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 xl:px-12">

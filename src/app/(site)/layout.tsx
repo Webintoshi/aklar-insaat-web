@@ -37,7 +37,8 @@ export default async function SiteLayout({
   const waConfig = await getWhatsAppConfig()
   
   const waEnabled = waConfig?.is_enabled ?? true
-  const waPhone = waConfig?.phone_number || '+905457277297'
+  const waPhoneRaw = waConfig?.phone_number || '+905327624267'
+  const waPhone = waPhoneRaw === '+905457277297' ? '+905327624267' : waPhoneRaw
   const waMessage = waConfig?.default_message || 'Merhaba, web sitenizden ulaşıyorum.'
   const waPosition = waConfig?.position || 'bottom-right'
   const waColor = waConfig?.button_color || '#25D366'
