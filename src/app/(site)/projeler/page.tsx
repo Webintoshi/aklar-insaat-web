@@ -21,6 +21,7 @@ type ProjectRow = {
   name: string
   slug: string
   about_image_url: string | null
+  cover_image?: string | null
   is_featured: boolean | null
   project_status: 'completed' | 'ongoing' | null
   status: string | null
@@ -76,7 +77,50 @@ export default async function ProjelerPage({ searchParams }: Props) {
   }
 
   const { data } = await query
-  const projects = (data || []) as ProjectRow[]
+  const projectRows = (data || []) as ProjectRow[]
+  const projectIds = projectRows.map((project) => project.id).filter(Boolean)
+
+  const [{ data: mediaRows }, { data: imageRows }] = await Promise.all([
+    projectIds.length
+      ? supabase
+          .from('project_media')
+          .select('project_id, url, created_at, sort_order')
+          .in('project_id', projectIds)
+          .order('created_at', { ascending: true })
+          .order('sort_order', { ascending: true })
+      : Promise.resolve({ data: [] as Array<{ project_id: string; url: string | null }> }),
+    projectIds.length
+      ? supabase
+          .from('project_images')
+          .select('project_id, image_url, created_at, order_index')
+          .in('project_id', projectIds)
+          .order('created_at', { ascending: true })
+          .order('order_index', { ascending: true })
+      : Promise.resolve({ data: [] as Array<{ project_id: string; image_url: string | null }> }),
+  ])
+
+  const firstMediaCover = new Map<string, string>()
+  for (const media of mediaRows || []) {
+    if (!media.project_id || !media.url || firstMediaCover.has(media.project_id)) continue
+    if (media.url.trim().length === 0) continue
+    firstMediaCover.set(media.project_id, media.url)
+  }
+
+  const firstImageCover = new Map<string, string>()
+  for (const image of imageRows || []) {
+    if (!image.project_id || !image.image_url || firstImageCover.has(image.project_id)) continue
+    if (image.image_url.trim().length === 0) continue
+    firstImageCover.set(image.project_id, image.image_url)
+  }
+
+  const projects = projectRows.map((project) => ({
+    ...project,
+    cover_image:
+      firstMediaCover.get(project.id) ||
+      firstImageCover.get(project.id) ||
+      project.about_image_url ||
+      null,
+  }))
 
   const heroTitle =
     currentStatus === 'completed'
@@ -168,9 +212,9 @@ export default async function ProjelerPage({ searchParams }: Props) {
                   className="group bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-xl transition-all hover:-translate-y-1"
                 >
                   <div className="aspect-[4/3] relative overflow-hidden">
-                    {project.about_image_url ? (
+                    {project.cover_image ? (
                       <Image
-                        src={project.about_image_url}
+                        src={project.cover_image}
                         alt={project.name}
                         fill
                         className="object-cover group-hover:scale-105 transition-transform duration-500"

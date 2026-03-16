@@ -392,38 +392,37 @@ export async function getProjects(options?: { status?: 'completed' | 'ongoing'; 
   const { data: mediaRows } = projectIds.length
     ? await supabase
         .from('project_media')
-        .select('project_id, category, url, sort_order')
+        .select('project_id, category, url, sort_order, created_at')
         .in('project_id', projectIds)
+        .order('created_at', { ascending: true })
         .order('sort_order', { ascending: true })
-    : { data: [] as Array<{ project_id: string; category: string | null; url: string | null; sort_order?: number | null }> }
+    : { data: [] as Array<{ project_id: string; category: string | null; url: string | null; sort_order?: number | null; created_at?: string | null }> }
 
   const { data: imageRows } = projectIds.length
     ? await supabase
         .from('project_images')
-        .select('project_id, image_type, image_url, order_index')
+        .select('project_id, image_type, image_url, order_index, created_at')
         .in('project_id', projectIds)
+        .order('created_at', { ascending: true })
         .order('order_index', { ascending: true })
-    : { data: [] as Array<{ project_id: string; image_type: string | null; image_url: string | null; order_index?: number | null }> }
+    : { data: [] as Array<{ project_id: string; image_type: string | null; image_url: string | null; order_index?: number | null; created_at?: string | null }> }
 
   return projectRows.map((p) => {
     const media = (mediaRows || []).filter((m) => m.project_id === p.id)
     const images = (imageRows || []).filter((img) => img.project_id === p.id)
 
-    let featuredImage =
+    const firstMediaImage =
+      media.find((m) => typeof m.url === 'string' && m.url.trim().length > 0)?.url || null
+
+    const firstLegacyImage =
+      images.find((img) => typeof img.image_url === 'string' && img.image_url.trim().length > 0)?.image_url || null
+
+    const featuredImage =
+      firstMediaImage ||
+      firstLegacyImage ||
       (p as { featured_image?: string | null; about_image_url?: string | null }).featured_image ||
       (p as { about_image_url?: string | null }).about_image_url ||
       null
-
-    if (!featuredImage && media.length > 0) {
-      const aboutMedia = media.find((m) => m.category === 'about')
-      const exteriorMedia = media.find((m) => m.category === 'exterior')
-      featuredImage = aboutMedia?.url || exteriorMedia?.url || media[0]?.url || null
-    }
-
-    if (!featuredImage && images.length > 0) {
-      const exteriorImage = images.find((img) => img.image_type === 'exterior')
-      featuredImage = exteriorImage?.image_url || images[0]?.image_url || null
-    }
 
     return {
       ...p,
