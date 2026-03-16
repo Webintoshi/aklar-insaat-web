@@ -2,6 +2,28 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 
 const ALLOWED_CATEGORIES = ["about", "exterior", "interior", "location"];
+const R2_PUBLIC_BASE_URL = process.env.NEXT_PUBLIC_R2_PUBLIC_URL?.replace(/\/+$/, "");
+
+function normalizeMediaUrl(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+
+  if (trimmed.startsWith("blob:") || trimmed.startsWith("data:")) {
+    return null;
+  }
+
+  if (/^https?:\/\//i.test(trimmed)) {
+    return trimmed;
+  }
+
+  if (!R2_PUBLIC_BASE_URL) {
+    return null;
+  }
+
+  return `${R2_PUBLIC_BASE_URL}/${trimmed.replace(/^\/+/, "")}`;
+}
 
 export async function POST(req: NextRequest) {
   try {
@@ -17,14 +39,14 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
 
     const projectId = body.project_id || body.projectId;
-    const url = body.url || body.publicUrl;
+    const url = normalizeMediaUrl(body.url || body.publicUrl);
     const r2Key = body.r2_key || body.r2Key || (typeof url === "string" ? url.replace(/^https?:\/\/[^/]+\//, "") : null);
     const category = body.category;
     const sortOrder = Number.isFinite(body.sort_order) ? body.sort_order : Number.isFinite(body.sortOrder) ? body.sortOrder : 0;
 
     if (!projectId || !url || !category) {
       return NextResponse.json(
-        { error: "project_id/projectId, url/publicUrl ve category zorunludur" },
+        { error: "project_id/projectId, gecerli url/publicUrl ve category zorunludur" },
         { status: 400 }
       );
     }

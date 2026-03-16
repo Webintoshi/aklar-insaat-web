@@ -10,6 +10,7 @@ import {
   Image as ImageIcon,
   MapPin,
   Loader2,
+  Check,
   Trash2,
   Plus
 } from 'lucide-react'
@@ -44,10 +45,21 @@ type MediaCategory = 'about' | 'exterior' | 'interior' | 'location'
 
 const MAX_UPLOAD_SIZE_BYTES = 20 * 1024 * 1024
 const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif', 'image/heic', 'image/heif']
+const R2_PUBLIC_BASE_URL = process.env.NEXT_PUBLIC_R2_PUBLIC_URL?.replace(/\/+$/, '') || ''
 
 function getFileExtension(fileName: string): string {
   const extension = fileName.split('.').pop()?.toLowerCase() || 'jpg'
   return extension === 'jpg' ? 'jpeg' : extension
+}
+
+function resolveMediaUrl(rawUrl: string | null | undefined): string | null {
+  if (!rawUrl) return null
+  const trimmed = rawUrl.trim()
+  if (!trimmed) return null
+  if (trimmed.startsWith('blob:') || trimmed.startsWith('data:')) return null
+  if (/^https?:\/\//i.test(trimmed)) return trimmed
+  if (!R2_PUBLIC_BASE_URL) return null
+  return `${R2_PUBLIC_BASE_URL}/${trimmed.replace(/^\/+/, '')}`
 }
 
 export default function ProjeDuzenlePage() {
@@ -60,6 +72,9 @@ export default function ProjeDuzenlePage() {
   const [project, setProject] = useState<Project | null>(null)
   const [media, setMedia] = useState<Media[]>([])
   const [uploading, setUploading] = useState(false)
+  const [selectedMediaIds, setSelectedMediaIds] = useState<string[]>([])
+  const [bulkDeleting, setBulkDeleting] = useState(false)
+  const [coverUpdatingId, setCoverUpdatingId] = useState<string | null>(null)
 
   const loadProject = useCallback(async () => {
     if (!projectId) return
@@ -91,6 +106,7 @@ export default function ProjeDuzenlePage() {
         meta_desc: data.meta_desc || '',
       })
       setMedia(data.project_media || [])
+      setSelectedMediaIds([])
       setErrorMessage(null)
     } catch (error) {
       console.error('Error loading project:', error)
@@ -246,10 +262,82 @@ export default function ProjeDuzenlePage() {
       })
 
       if (!res.ok) throw new Error('Delete failed')
+      setSelectedMediaIds((prev) => prev.filter((id) => id !== mediaId))
       loadProject()
     } catch (error) {
       console.error('Delete error:', error)
       alert('Silme sırasında bir hata oluştu')
+    }
+  }
+
+  const toggleMediaSelection = (mediaId: string) => {
+    setSelectedMediaIds((prev) =>
+      prev.includes(mediaId) ? prev.filter((id) => id !== mediaId) : [...prev, mediaId]
+    )
+  }
+
+  const handleBulkDelete = async () => {
+    if (selectedMediaIds.length === 0) return
+    if (!confirm(`${selectedMediaIds.length} görsel silinecek. Devam edilsin mi?`)) return
+
+    setBulkDeleting(true)
+    try {
+      const results = await Promise.allSettled(
+        selectedMediaIds.map(async (mediaId) => {
+          const res = await fetch(`/api/media/${mediaId}`, { method: 'DELETE' })
+          if (!res.ok) {
+            const data = await res.json().catch(() => ({}))
+            throw new Error(data?.error || `Silinemedi (${mediaId})`)
+          }
+        })
+      )
+
+      const failed = results.filter((r): r is PromiseRejectedResult => r.status === 'rejected')
+      if (failed.length > 0) {
+        throw new Error(`${failed.length} görsel silinemedi`)
+      }
+
+      setSelectedMediaIds([])
+      loadProject()
+    } catch (error) {
+      console.error('Bulk delete error:', error)
+      alert(error instanceof Error ? error.message : 'Toplu silme sırasında hata oluştu')
+    } finally {
+      setBulkDeleting(false)
+    }
+  }
+
+  const handleSetCoverImage = async (mediaItem: Media) => {
+    if (!projectId) return
+
+    const resolvedUrl = resolveMediaUrl(mediaItem.url)
+    if (!resolvedUrl) {
+      alert('Geçersiz görsel URL, kapak olarak ayarlanamadı')
+      return
+    }
+
+    setCoverUpdatingId(mediaItem.id)
+    try {
+      const res = await fetch(`/api/projects/${projectId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          about_image_url: resolvedUrl,
+        }),
+      })
+
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        throw new Error(data?.error || 'Kapak görseli güncellenemedi')
+      }
+
+      setProject((prev) => (prev ? { ...prev, about_image_url: resolvedUrl } : prev))
+      setErrorMessage(null)
+    } catch (error) {
+      console.error('Set cover error:', error)
+      alert(error instanceof Error ? error.message : 'Kapak görseli ayarlanamadı')
+    } finally {
+      setCoverUpdatingId(null)
     }
   }
 
@@ -281,6 +369,9 @@ export default function ProjeDuzenlePage() {
   const exteriorMedia = media.filter(m => m.category === 'exterior')
   const interiorMedia = media.filter(m => m.category === 'interior')
   const locationMedia = media.filter(m => m.category === 'location')
+  const currentCoverUrl = resolveMediaUrl(project.about_image_url)
+  const aboutPreviewUrl = resolveMediaUrl(aboutMedia[0]?.url)
+  const locationPreviewUrl = resolveMediaUrl(locationMedia[0]?.url)
 
   return (
     <div className="max-w-6xl mx-auto">
@@ -456,17 +547,39 @@ export default function ProjeDuzenlePage() {
               <div className="flex items-center gap-4">
                 {aboutMedia.length > 0 ? (
                   <div className="relative">
-                    <img
-                      src={aboutMedia[0].url}
-                      alt="Proje görseli"
-                      className="w-48 h-32 object-cover rounded-lg"
-                    />
+                    {aboutPreviewUrl ? (
+                      <img
+                        src={aboutPreviewUrl}
+                        alt="Proje görseli"
+                        className="w-48 h-32 object-cover rounded-lg"
+                      />
+                    ) : (
+                      <div className="w-48 h-32 rounded-lg border border-amber-300 bg-amber-50 text-amber-700 text-xs px-3 py-2">
+                        Bu görselin URL&apos;i geçersiz. Medya sekmesinden silip yeniden yükleyin.
+                      </div>
+                    )}
                     <button
                       onClick={() => handleDeleteMedia(aboutMedia[0].id)}
                       className="absolute -top-2 -right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600"
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>
+                    {aboutPreviewUrl && (
+                      currentCoverUrl === aboutPreviewUrl ? (
+                        <span className="absolute left-2 bottom-2 px-2 py-1 text-xs rounded bg-green-600 text-white">
+                          Kapak
+                        </span>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => handleSetCoverImage(aboutMedia[0])}
+                          disabled={coverUpdatingId === aboutMedia[0].id}
+                          className="absolute left-2 bottom-2 px-2 py-1 text-xs rounded bg-black/70 text-white hover:bg-black/85"
+                        >
+                          {coverUpdatingId === aboutMedia[0].id ? 'Ayarlandi...' : 'Kapak Yap'}
+                        </button>
+                      )
+                    )}
                   </div>
                 ) : (
                   <label className="flex flex-col items-center justify-center w-48 h-32 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-blue-500 hover:bg-blue-50 transition-colors">
@@ -482,6 +595,11 @@ export default function ProjeDuzenlePage() {
                   </label>
                 )}
               </div>
+              {currentCoverUrl && (
+                <p className="mt-2 text-xs text-blue-700">
+                  Aktif kapak görseli ayarlı. Medya sekmesinden farklı bir görseli kapak yapabilirsiniz.
+                </p>
+              )}
             </div>
 
             <div className="space-y-4">
@@ -536,6 +654,31 @@ export default function ProjeDuzenlePage() {
 
       {activeTab === 'media' && (
         <div className="space-y-6">
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 px-4 py-3 flex flex-wrap items-center justify-between gap-3">
+            <p className="text-sm text-gray-600">
+              Seçili görsel: <span className="font-semibold text-gray-900">{selectedMediaIds.length}</span>
+            </p>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setSelectedMediaIds([])}
+                disabled={selectedMediaIds.length === 0 || bulkDeleting}
+                className="px-3 py-2 text-sm border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+              >
+                Seçimi Temizle
+              </button>
+              <button
+                type="button"
+                onClick={handleBulkDelete}
+                disabled={selectedMediaIds.length === 0 || bulkDeleting}
+                className="inline-flex items-center px-3 py-2 text-sm bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50"
+              >
+                {bulkDeleting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Trash2 className="w-4 h-4 mr-2" />}
+                Seçilenleri Sil
+              </button>
+            </div>
+          </div>
+
           {/* Dış Mekan */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
             <div className="flex items-center justify-between mb-6">
@@ -558,18 +701,49 @@ export default function ProjeDuzenlePage() {
             </div>
             <div className="grid grid-cols-4 gap-4">
               {exteriorMedia.map((item) => (
-                <div key={item.id} className="relative group">
-                  <img
-                    src={item.url}
-                    alt="Dış mekan"
-                    className="w-full aspect-video object-cover rounded-lg"
-                  />
+                <div key={item.id} className="relative group rounded-lg overflow-hidden border border-gray-200">
+                  {resolveMediaUrl(item.url) ? (
+                    <img
+                      src={resolveMediaUrl(item.url) || ''}
+                      alt="Dış mekan"
+                      className="w-full aspect-video object-cover rounded-lg"
+                    />
+                  ) : (
+                    <div className="w-full aspect-video bg-amber-50 text-amber-700 text-xs p-2">
+                      Geçersiz URL
+                    </div>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => toggleMediaSelection(item.id)}
+                    className={`absolute top-2 left-2 w-6 h-6 rounded-md border flex items-center justify-center ${
+                      selectedMediaIds.includes(item.id)
+                        ? 'bg-blue-600 border-blue-600 text-white'
+                        : 'bg-white/90 border-gray-300 text-gray-600'
+                    }`}
+                  >
+                    {selectedMediaIds.includes(item.id) && <Check className="w-4 h-4" />}
+                  </button>
                   <button
                     onClick={() => handleDeleteMedia(item.id)}
                     className="absolute top-2 right-2 p-1 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
+                  <div className="absolute left-2 bottom-2 right-2 flex items-center justify-between gap-2">
+                    {resolveMediaUrl(item.url) && currentCoverUrl === resolveMediaUrl(item.url) ? (
+                      <span className="px-2 py-1 text-xs rounded bg-green-600 text-white">Kapak</span>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => handleSetCoverImage(item)}
+                        disabled={coverUpdatingId === item.id}
+                        className="px-2 py-1 text-xs rounded bg-black/65 text-white hover:bg-black/80"
+                      >
+                        {coverUpdatingId === item.id ? 'Ayarlandi...' : 'Kapak Yap'}
+                      </button>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>
@@ -597,18 +771,49 @@ export default function ProjeDuzenlePage() {
             </div>
             <div className="grid grid-cols-6 gap-4">
               {interiorMedia.map((item) => (
-                <div key={item.id} className="relative group">
-                  <img
-                    src={item.url}
-                    alt="İç mekan"
-                    className="w-full aspect-square object-cover rounded-lg"
-                  />
+                <div key={item.id} className="relative group rounded-lg overflow-hidden border border-gray-200">
+                  {resolveMediaUrl(item.url) ? (
+                    <img
+                      src={resolveMediaUrl(item.url) || ''}
+                      alt="İç mekan"
+                      className="w-full aspect-square object-cover rounded-lg"
+                    />
+                  ) : (
+                    <div className="w-full aspect-square bg-amber-50 text-amber-700 text-xs p-2">
+                      Geçersiz URL
+                    </div>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => toggleMediaSelection(item.id)}
+                    className={`absolute top-2 left-2 w-6 h-6 rounded-md border flex items-center justify-center ${
+                      selectedMediaIds.includes(item.id)
+                        ? 'bg-blue-600 border-blue-600 text-white'
+                        : 'bg-white/90 border-gray-300 text-gray-600'
+                    }`}
+                  >
+                    {selectedMediaIds.includes(item.id) && <Check className="w-4 h-4" />}
+                  </button>
                   <button
                     onClick={() => handleDeleteMedia(item.id)}
                     className="absolute top-2 right-2 p-1 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
+                  <div className="absolute left-2 bottom-2 right-2 flex items-center justify-between gap-2">
+                    {resolveMediaUrl(item.url) && currentCoverUrl === resolveMediaUrl(item.url) ? (
+                      <span className="px-2 py-1 text-xs rounded bg-green-600 text-white">Kapak</span>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => handleSetCoverImage(item)}
+                        disabled={coverUpdatingId === item.id}
+                        className="px-2 py-1 text-xs rounded bg-black/65 text-white hover:bg-black/80"
+                      >
+                        {coverUpdatingId === item.id ? 'Ayarlandi...' : 'Kapak Yap'}
+                      </button>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>
@@ -626,17 +831,39 @@ export default function ProjeDuzenlePage() {
             <div className="flex items-center gap-4">
               {locationMedia.length > 0 ? (
                 <div className="relative">
-                  <img
-                    src={locationMedia[0].url}
-                    alt="Konum görseli"
-                    className="w-64 h-40 object-cover rounded-lg"
-                  />
+                  {locationPreviewUrl ? (
+                    <img
+                      src={locationPreviewUrl}
+                      alt="Konum görseli"
+                      className="w-64 h-40 object-cover rounded-lg"
+                    />
+                  ) : (
+                    <div className="w-64 h-40 rounded-lg border border-amber-300 bg-amber-50 text-amber-700 text-xs px-3 py-2">
+                      Bu konum görselinin URL&apos;i geçersiz.
+                    </div>
+                  )}
                   <button
                     onClick={() => handleDeleteMedia(locationMedia[0].id)}
                     className="absolute -top-2 -right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600"
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
+                  {locationPreviewUrl && (
+                    currentCoverUrl === locationPreviewUrl ? (
+                      <span className="absolute left-2 bottom-2 px-2 py-1 text-xs rounded bg-green-600 text-white">
+                        Kapak
+                      </span>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => handleSetCoverImage(locationMedia[0])}
+                        disabled={coverUpdatingId === locationMedia[0].id}
+                        className="absolute left-2 bottom-2 px-2 py-1 text-xs rounded bg-black/70 text-white hover:bg-black/85"
+                      >
+                        {coverUpdatingId === locationMedia[0].id ? 'Ayarlandi...' : 'Kapak Yap'}
+                      </button>
+                    )
+                  )}
                 </div>
               ) : (
                 <label className="flex flex-col items-center justify-center w-64 h-40 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-blue-500 hover:bg-blue-50 transition-colors">
