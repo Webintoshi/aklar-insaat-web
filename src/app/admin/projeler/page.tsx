@@ -184,13 +184,19 @@ export default function ProjelerAdminPage() {
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredProjects.map((project) => (
+          {filteredProjects.map((project) => {
+            const coverImage =
+              project.about_image_url ||
+              project.project_media?.find((media) => typeof media.url === 'string' && media.url.trim().length > 0)?.url ||
+              null
+
+            return (
             <div key={project.id} className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden group">
               {/* Görsel */}
               <div className="aspect-video bg-gray-100 relative overflow-hidden">
-                {project.about_image_url ? (
+                {coverImage ? (
                   <img
-                    src={project.about_image_url}
+                    src={coverImage}
                     alt={project.name}
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                   />
@@ -248,7 +254,7 @@ export default function ProjelerAdminPage() {
                 </div>
               </div>
             </div>
-          ))}
+          )})}
         </div>
       )}
     </div>

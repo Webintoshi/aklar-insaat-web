@@ -73,17 +73,25 @@ export async function GET() {
           .from("project_media")
           .select("*")
           .eq("project_id", project.id)
+          .order("created_at", { ascending: true })
           .order("sort_order", { ascending: true });
 
         if (imgError) {
           console.error(`[API] Images error for ${project.id}:`, imgError.message);
         }
 
+        const firstMediaCover =
+          (images || []).find((img) => typeof img.url === "string" && img.url.trim().length > 0)?.url || null;
+
         return {
           ...project,
           name: project.name || project.title || "",
           slug: project.slug || "",
-          about_image_url: project.about_image_url || images?.find((img) => img.category === "about")?.url || null,
+          about_image_url:
+            firstMediaCover ||
+            project.about_image_url ||
+            images?.find((img) => img.category === "about")?.url ||
+            null,
           project_images: images || [],
           project_media: images || []
         };
