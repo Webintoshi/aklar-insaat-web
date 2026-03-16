@@ -8,7 +8,6 @@ import {
   ArrowLeft,
   Save,
   Building2,
-  Upload,
   CheckCircle2,
   Clock,
   AlertCircle,
@@ -68,7 +67,6 @@ interface MediaFile {
   id: string
   url: string
   file: File
-  uploading: boolean
   category: CategoryKey
 }
 
@@ -78,10 +76,25 @@ interface ProjectForm {
   about_text: string
 }
 
+const MAX_UPLOAD_SIZE_BYTES = 20 * 1024 * 1024
+const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif', 'image/heic', 'image/heif']
+
+function getFileExtension(fileName: string): string {
+  const extension = fileName.split('.').pop()?.toLowerCase() || 'jpg'
+  return extension === 'jpg' ? 'jpeg' : extension
+}
+
+function getImageDimensions(file: File): Promise<{ width: number; height: number }> {
+  return new Promise((resolve) => {
+    const image = new window.Image()
+    image.onload = () => resolve({ width: image.width, height: image.height })
+    image.src = URL.createObjectURL(file)
+  })
+}
+
 export default function YeniProjePage() {
   const router = useRouter()
   const [saving, setSaving] = useState(false)
-  const [uploading, setUploading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [activeCategory, setActiveCategory] = useState<CategoryKey>('about')
 
@@ -116,37 +129,36 @@ export default function YeniProjePage() {
   }, [])
 
   // Dosya yükle
-  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>, category: CategoryKey) => {
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>, category: CategoryKey) => {
     const files = Array.from(e.target.files || [])
     if (files.length === 0) return
 
     const categoryConfig = CATEGORIES.find(c => c.key === category)!
     const currentCount = mediaFiles[category].length
 
-    // Limit kontrolü
     if (currentCount + files.length > categoryConfig.maxFiles) {
       setError(`${categoryConfig.label} için en fazla ${categoryConfig.maxFiles} fotoğraf yükleyebilirsiniz.`)
+      e.currentTarget.value = ''
       return
     }
 
-    // Dosya kontrolü
     for (const file of files) {
-      if (!file.type.startsWith('image/')) {
-        setError('Sadece fotoğraf dosyaları yüklenebilir (JPG, PNG)')
+      if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
+        setError('Sadece desteklenen görsel dosyaları yüklenebilir (JPG, PNG, WEBP, GIF, HEIC)')
+        e.currentTarget.value = ''
         return
       }
-      if (file.size > 20 * 1024 * 1024) {
+      if (file.size > MAX_UPLOAD_SIZE_BYTES) {
         setError('Her fotoğraf en fazla 20MB olabilir')
+        e.currentTarget.value = ''
         return
       }
     }
 
-    // Önce local preview oluştur
     const newFiles: MediaFile[] = files.map(file => ({
       id: Math.random().toString(36).substring(7),
       url: URL.createObjectURL(file),
       file,
-      uploading: true,
       category,
     }))
 
@@ -154,50 +166,83 @@ export default function YeniProjePage() {
       ...prev,
       [category]: [...prev[category], ...newFiles]
     }))
-
-    // Sırayla yükle
-    for (const mediaFile of newFiles) {
-      try {
-        const formData = new FormData()
-        formData.append('file', mediaFile.file)
-
-        const res = await fetch('/api/upload', {
-          method: 'POST',
-          body: formData,
-        })
-
-        const data = await res.json()
-
-        if (!res.ok) {
-          throw new Error(data.error || 'Yükleme başarısız')
-        }
-
-        // URL'yi güncelle
-        setMediaFiles(prev => ({
-          ...prev,
-          [category]: prev[category].map(f =>
-            f.id === mediaFile.id
-              ? { ...f, url: data.url, uploading: false }
-              : f
-          )
-        }))
-      } catch (err: any) {
-        setError(`${mediaFile.file.name} yüklenirken hata: ${err.message}`)
-        // Hatalı dosyayı kaldır
-        setMediaFiles(prev => ({
-          ...prev,
-          [category]: prev[category].filter(f => f.id !== mediaFile.id)
-        }))
-      }
-    }
+    setError(null)
+    e.currentTarget.value = ''
   }
 
   // Dosya sil
   const handleRemoveFile = (category: CategoryKey, id: string) => {
-    setMediaFiles(prev => ({
-      ...prev,
-      [category]: prev[category].filter(f => f.id !== id)
-    }))
+    setMediaFiles(prev => {
+      const fileToRemove = prev[category].find(f => f.id === id)
+      if (fileToRemove) {
+        URL.revokeObjectURL(fileToRemove.url)
+      }
+
+      return {
+        ...prev,
+        [category]: prev[category].filter(f => f.id !== id)
+      }
+    })
+  }
+
+  const uploadMediaFile = async (
+    projectId: string,
+    mediaFile: MediaFile,
+    sortOrder: number
+  ): Promise<{ publicUrl: string }> => {
+    const fileExtension = getFileExtension(mediaFile.file.name)
+
+    const presignRes = await fetch(`/api/projects/${projectId}/presign`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        category: mediaFile.category,
+        contentType: mediaFile.file.type,
+        fileExtension,
+        fileSize: mediaFile.file.size,
+      })
+    })
+
+    const presignData = await presignRes.json()
+    if (!presignRes.ok) {
+      throw new Error(presignData?.error || `${mediaFile.file.name}: Presign işlemi başarısız`)
+    }
+
+    const uploadRes = await fetch(presignData.presignedUrl, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': mediaFile.file.type,
+      },
+      body: mediaFile.file,
+    })
+
+    if (!uploadRes.ok) {
+      throw new Error(`${mediaFile.file.name}: R2 yüklemesi başarısız`)
+    }
+
+    const dimensions = await getImageDimensions(mediaFile.file)
+    const saveRes = await fetch('/api/media', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        project_id: projectId,
+        url: presignData.publicUrl,
+        r2_key: presignData.key,
+        category: mediaFile.category,
+        file_name: mediaFile.file.name,
+        file_size: mediaFile.file.size,
+        width: dimensions.width,
+        height: dimensions.height,
+        sort_order: sortOrder,
+      })
+    })
+
+    const saveData = await saveRes.json()
+    if (!saveRes.ok) {
+      throw new Error(saveData?.error || `${mediaFile.file.name}: Medya kaydı başarısız`)
+    }
+
+    return { publicUrl: presignData.publicUrl }
   }
 
   // Form gönder
@@ -209,21 +254,17 @@ export default function YeniProjePage() {
     try {
       if (!form.name.trim()) {
         setError('Proje adı zorunludur')
-        setSaving(false)
         return
       }
 
       if (mediaFiles.about.length === 0) {
         setError('En az 1 kapak görseli yüklemelisiniz')
-        setSaving(false)
         return
       }
 
       const slug = generateSlug(form.name)
-      const aboutImageUrl = mediaFiles.about[0]?.url
 
-      // 1. Projeyi oluştur
-      const res = await fetch('/api/projects', {
+      const createRes = await fetch('/api/projects', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -231,43 +272,59 @@ export default function YeniProjePage() {
           slug,
           project_status: form.project_status,
           about_text: form.about_text.trim() || `${form.name} projesi hakkında detaylı bilgi için bize ulaşın.`,
-          about_image_url: aboutImageUrl,
+          about_image_url: null,
           status: 'published',
           is_featured: false,
           cta_text: 'Detayları Gör',
         })
       })
 
-      const projectData = await res.json()
-
-      if (!res.ok) {
-        throw new Error(projectData.error || `Hata: ${res.status}`)
+      const projectData = await createRes.json()
+      if (!createRes.ok) {
+        throw new Error(projectData?.error || `Hata: ${createRes.status}`)
       }
 
-      // 2. Medya dosyalarını kaydet
-      const allMedia = [
-        ...mediaFiles.exterior.map((f, i) => ({ ...f, category: 'exterior', sort: i })),
-        ...mediaFiles.interior.map((f, i) => ({ ...f, category: 'interior', sort: i })),
-        ...mediaFiles.location.map((f, i) => ({ ...f, category: 'location', sort: i })),
+      if (!projectData?.id) {
+        throw new Error('Proje kimliği alınamadı')
+      }
+
+      const allMedia: Array<{ file: MediaFile; sort: number }> = [
+        ...mediaFiles.about.map((file, index) => ({ file, sort: index })),
+        ...mediaFiles.exterior.map((file, index) => ({ file, sort: index })),
+        ...mediaFiles.interior.map((file, index) => ({ file, sort: index })),
+        ...mediaFiles.location.map((file, index) => ({ file, sort: index })),
       ]
 
-      for (const media of allMedia) {
-        await fetch('/api/media', {
-          method: 'POST',
+      let firstUploadedUrl: string | null = null
+
+      for (const mediaItem of allMedia) {
+        const { publicUrl } = await uploadMediaFile(projectData.id, mediaItem.file, mediaItem.sort)
+        if (!firstUploadedUrl) {
+          firstUploadedUrl = publicUrl
+        }
+      }
+
+      if (firstUploadedUrl) {
+        const updateRes = await fetch(`/api/projects/${projectData.id}`, {
+          method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            project_id: projectData.id,
-            url: media.url,
-            category: media.category,
-            sort_order: media.sort,
+            about_image_url: firstUploadedUrl,
           })
         })
+
+        if (!updateRes.ok) {
+          const updateData = await updateRes.json().catch(() => ({}))
+          throw new Error(updateData?.error || 'Kapak görseli güncellenemedi')
+        }
       }
 
       router.push('/admin/projeler')
       router.refresh()
-    } catch (err: any) {
-      setError(err.message || 'Proje oluşturulurken bir hata oluştu')
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Proje oluşturulurken bir hata oluştu'
+      setError(message)
+    } finally {
       setSaving(false)
     }
   }
@@ -437,12 +494,6 @@ export default function YeniProjePage() {
                       className="object-cover"
                     />
 
-                    {file.uploading && (
-                      <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
-                        <Loader2 className="w-8 h-8 text-white animate-spin" />
-                      </div>
-                    )}
-
                     <button
                       type="button"
                       onClick={() => handleRemoveFile(activeCategory, file.id)}
@@ -464,7 +515,7 @@ export default function YeniProjePage() {
                 <activeCategoryConfig.icon className="w-12 h-12 text-gray-300 mx-auto mb-3" />
                 <p className="text-gray-500">Henüz fotoğraf eklenmemiş</p>
                 <p className="text-sm text-gray-400 mt-1">
-                  "Fotoğraf Ekle" butonuna tıklayarak yükleme yapabilirsiniz
+                  Fotoğraf Ekle butonuna tıklayarak yükleme yapabilirsiniz
                 </p>
               </div>
             )}

@@ -42,6 +42,14 @@ interface Media {
 
 type MediaCategory = 'about' | 'exterior' | 'interior' | 'location'
 
+const MAX_UPLOAD_SIZE_BYTES = 20 * 1024 * 1024
+const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif', 'image/heic', 'image/heif']
+
+function getFileExtension(fileName: string): string {
+  const extension = fileName.split('.').pop()?.toLowerCase() || 'jpg'
+  return extension === 'jpg' ? 'jpeg' : extension
+}
+
 export default function ProjeDuzenlePage() {
   const params = useParams<{ id: string }>()
   const projectId = params?.id
@@ -145,22 +153,46 @@ export default function ProjeDuzenlePage() {
       const isSingleCategory = category === 'about' || category === 'location'
       const filesToUpload = isSingleCategory ? files.slice(0, 1) : files
 
+      for (const file of filesToUpload) {
+        if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
+          throw new Error(`${file.name}: Desteklenmeyen dosya tipi`)
+        }
+        if (file.size > MAX_UPLOAD_SIZE_BYTES) {
+          throw new Error(`${file.name}: Dosya boyutu 20MB'dan büyük olamaz`)
+        }
+      }
+
       const startSortOrder = media.filter((m) => m.category === category).length
 
       const results = await Promise.allSettled(
         filesToUpload.map(async (file, index) => {
-          const formData = new FormData()
-          formData.append('file', file)
-          formData.append('folder', `projects/${project.id}/${category}`)
-
-          const uploadRes = await fetch('/api/upload', {
+          const fileExtension = getFileExtension(file.name)
+          const presignRes = await fetch(`/api/projects/${project.id}/presign`, {
             method: 'POST',
-            body: formData,
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              category,
+              contentType: file.type,
+              fileExtension,
+              fileSize: file.size,
+            }),
           })
 
-          const uploadJson = await uploadRes.json()
-          if (!uploadRes.ok) {
-            throw new Error(uploadJson?.error || `${file.name}: Upload failed`)
+          const presignJson = await presignRes.json()
+          if (!presignRes.ok) {
+            throw new Error(presignJson?.error || `${file.name}: Presign failed`)
+          }
+
+          const r2UploadRes = await fetch(presignJson.presignedUrl, {
+            method: 'PUT',
+            headers: {
+              'Content-Type': file.type,
+            },
+            body: file,
+          })
+
+          if (!r2UploadRes.ok) {
+            throw new Error(`${file.name}: Upload failed`)
           }
 
           const dimensions = await getImageDimensions(file)
@@ -170,7 +202,8 @@ export default function ProjeDuzenlePage() {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               project_id: project.id,
-              url: uploadJson.url,
+              url: presignJson.publicUrl,
+              r2_key: presignJson.key,
               category,
               file_name: file.name,
               file_size: file.size,
