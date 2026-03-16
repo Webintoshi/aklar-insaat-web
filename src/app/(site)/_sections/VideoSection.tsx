@@ -26,13 +26,14 @@ export function VideoSection({ data }: VideoSectionProps) {
 
   const { background_image, video_type, video_id, title, description, play_button_text, autoplay } = data
   const hasBackgroundImage = Boolean(background_image && background_image.trim().length > 0)
+  const selfHostedUrl = data.video_url?.replace(/ /g, '%20') ?? null
 
   const getVideoEmbedUrl = () => {
     if (video_type === 'youtube' && video_id) {
-      return `https://www.youtube.com/embed/${video_id}?autoplay=${autoplay ? 1 : 0}&rel=0`
+      return `https://www.youtube.com/embed/${video_id}?autoplay=${autoplay ? 1 : 0}&rel=0&playsinline=1`
     }
-    if (video_type === 'self_hosted' && data.video_url) {
-      return data.video_url
+    if (video_type === 'vimeo' && video_id) {
+      return `https://player.vimeo.com/video/${video_id}?autoplay=${autoplay ? 1 : 0}`
     }
     return ''
   }
@@ -130,12 +131,22 @@ export function VideoSection({ data }: VideoSectionProps) {
               className="relative w-full max-w-5xl mx-4 aspect-video"
               onClick={(e) => e.stopPropagation()}
             >
-              {getVideoEmbedUrl() ? (
+              {video_type === 'self_hosted' && selfHostedUrl ? (
+                <video
+                  src={selfHostedUrl}
+                  className="absolute inset-0 h-full w-full rounded-xl bg-black"
+                  controls
+                  playsInline
+                  preload="metadata"
+                  autoPlay={autoplay}
+                  muted={autoplay}
+                />
+              ) : getVideoEmbedUrl() ? (
                 <iframe
                   src={getVideoEmbedUrl()}
                   title="Video"
                   className="absolute inset-0 w-full h-full rounded-xl"
-                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
                   allowFullScreen
                 />
               ) : (
