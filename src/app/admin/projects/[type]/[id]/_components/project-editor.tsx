@@ -60,8 +60,8 @@ export function ProjectEditor({ type, project, images = [] }: ProjectEditorProps
       return
     }
 
-    if (file.size > 10 * 1024 * 1024) {
-      setUploadError('Dosya boyutu 10MB\'dan küçük olmalıdır')
+    if (file.size > 20 * 1024 * 1024) {
+      setUploadError('Dosya boyutu 20MB\'dan küçük olmalıdır')
       return
     }
 

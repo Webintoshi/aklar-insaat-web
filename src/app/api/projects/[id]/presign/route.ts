@@ -3,11 +3,14 @@ import { createClient } from "@/lib/supabase/server";
 import { generatePresignedUploadUrl } from "@/lib/r2/presign";
 import { z } from "zod";
 
+const MAX_UPLOAD_SIZE_BYTES = 20 * 1024 * 1024; // 20MB
+
 // Validation schema
 const presignRequestSchema = z.object({
   category: z.enum(["exterior", "interior", "location"]),
   contentType: z.string().regex(/^image\/(jpeg|jpg|png|webp|gif)$/i),
   fileExtension: z.enum(["jpg", "jpeg", "png", "webp", "gif"]),
+  fileSize: z.number().int().positive().max(MAX_UPLOAD_SIZE_BYTES),
 });
 
 export async function POST(

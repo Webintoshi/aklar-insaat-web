@@ -3,7 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { generatePresignedUploadUrl } from "@/lib/r2/presign";
 
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp", "image/heic"];
-const MAX_SIZE = 10 * 1024 * 1024; // 10MB
+const MAX_SIZE = 20 * 1024 * 1024; // 20MB
 
 export async function POST(req: NextRequest) {
   try {
@@ -28,7 +28,7 @@ export async function POST(req: NextRequest) {
 
     if (fileSize > MAX_SIZE) {
       return NextResponse.json(
-        { error: "Maksimum dosya boyutu 10MB" },
+        { error: "Maksimum dosya boyutu 20MB" },
         { status: 400 }
       );
     }

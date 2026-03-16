@@ -80,8 +80,8 @@ export default function VideoEditorPage({ forcedVideoId }: VideoEditorPageProps 
       if (!file.type.startsWith('image/')) {
         throw new Error('Sadece görsel dosyaları yükleyebilirsiniz')
       }
-      if (file.size > 10 * 1024 * 1024) {
-        throw new Error('Görsel en fazla 10MB olabilir')
+      if (file.size > 20 * 1024 * 1024) {
+        throw new Error('Görsel en fazla 20MB olabilir')
       }
 
       const formData = new FormData()

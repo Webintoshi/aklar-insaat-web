@@ -37,10 +37,10 @@ function validateFile(file: File): { valid: boolean; error?: string } {
     return { valid: false, error: "Sadece JPG, PNG, WebP veya GIF dosyaları yüklenebilir." };
   }
 
-  // Check file size (10MB limit)
-  const maxSize = 10 * 1024 * 1024; // 10MB in bytes
+  // Check file size (20MB limit)
+  const maxSize = 20 * 1024 * 1024; // 20MB in bytes
   if (file.size > maxSize) {
-    return { valid: false, error: "Dosya boyutu 10MB'dan küçük olmalıdır." };
+    return { valid: false, error: "Dosya boyutu 20MB'dan küçük olmalıdır." };
   }
 
   return { valid: true };
@@ -89,6 +89,7 @@ export function useImageUpload(): UseImageUploadReturn {
             category,
             contentType: file.type,
             fileExtension,
+            fileSize: file.size,
           }),
         });
 

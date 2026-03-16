@@ -135,8 +135,8 @@ export default function YeniProjePage() {
         setError('Sadece fotoğraf dosyaları yüklenebilir (JPG, PNG)')
         return
       }
-      if (file.size > 5 * 1024 * 1024) {
-        setError('Her fotoğraf en fazla 5MB olabilir')
+      if (file.size > 20 * 1024 * 1024) {
+        setError('Her fotoğraf en fazla 20MB olabilir')
         return
       }
     }

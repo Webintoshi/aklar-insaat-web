@@ -25,9 +25,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Sadece görsel dosyaları yüklenebilir' }, { status: 400 })
     }
 
-    // Dosya boyutu kontrolü (10MB)
-    if (file.size > 10 * 1024 * 1024) {
-      return NextResponse.json({ error: 'Dosya boyutu 10MB\'dan küçük olmalıdır' }, { status: 400 })
+    // Dosya boyutu kontrolü (20MB)
+    if (file.size > 20 * 1024 * 1024) {
+      return NextResponse.json({ error: 'Dosya boyutu 20MB\'dan küçük olmalıdır' }, { status: 400 })
     }
 
     // Buffer'a çevir
