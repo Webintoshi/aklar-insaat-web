@@ -62,6 +62,10 @@ function resolveMediaUrl(rawUrl: string | null | undefined): string | null {
   return `${R2_PUBLIC_BASE_URL}/${trimmed.replace(/^\/+/, '')}`
 }
 
+function getUploadConnectivityHint(fileName: string): string {
+  return `${fileName}: R2 yukleme istegi tarayicidan gonderilemedi. CORS ayari veya R2 endpoint/domain ayarini kontrol edin.`
+}
+
 export default function ProjeDuzenlePage() {
   const params = useParams<{ id: string }>()
   const projectId = params?.id
@@ -183,32 +187,79 @@ export default function ProjeDuzenlePage() {
       const results = await Promise.allSettled(
         filesToUpload.map(async (file, index) => {
           const fileExtension = getFileExtension(file.name)
-          const presignRes = await fetch(`/api/projects/${project.id}/presign`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              category,
-              contentType: file.type,
-              fileExtension,
-              fileSize: file.size,
-            }),
-          })
+          let uploadedPublicUrl: string | null = null
+          let uploadedKey: string | null = null
 
-          const presignJson = await presignRes.json()
-          if (!presignRes.ok) {
-            throw new Error(presignJson?.error || `${file.name}: Presign failed`)
+          try {
+            const presignRes = await fetch(`/api/projects/${project.id}/presign`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                category,
+                contentType: file.type,
+                fileExtension,
+                fileSize: file.size,
+              }),
+            })
+
+            const presignJson = await presignRes.json()
+            if (!presignRes.ok) {
+              throw new Error(presignJson?.error || `${file.name}: Presign failed`)
+            }
+
+            const presignedUrl = typeof presignJson?.presignedUrl === 'string' ? presignJson.presignedUrl : ''
+            if (!/^https:\/\//i.test(presignedUrl)) {
+              throw new Error(`${file.name}: Gecersiz presigned URL`)
+            }
+
+            const r2UploadRes = await fetch(presignedUrl, {
+              method: 'PUT',
+              headers: {
+                'Content-Type': file.type,
+              },
+              body: file,
+            })
+
+            if (!r2UploadRes.ok) {
+              throw new Error(`${file.name}: Upload failed`)
+            }
+
+            uploadedPublicUrl = presignJson.publicUrl
+            uploadedKey = presignJson.key || null
+          } catch (directUploadError) {
+            // CORS/endpoint gibi durumlarda server-side fallback
+            console.warn('[DIRECT_UPLOAD_FAILED]', directUploadError)
+
+            const formData = new FormData()
+            formData.append('file', file)
+            formData.append('folder', `projects/${project.id}/${category}`)
+
+            const fallbackRes = await fetch('/api/upload', {
+              method: 'POST',
+              body: formData,
+            })
+
+            const fallbackJson = await fallbackRes.json().catch(() => ({}))
+            if (!fallbackRes.ok) {
+              if (fallbackRes.status === 413) {
+                throw new Error(`${file.name}: 413 hatasi (sunucu body limiti). R2 CORS duzeltilmeli.`)
+              }
+              throw new Error(
+                fallbackJson?.error ||
+                  `${file.name}: Yedek yukleme de basarisiz (${fallbackRes.status})`
+              )
+            }
+
+            uploadedPublicUrl =
+              typeof fallbackJson?.url === 'string' ? fallbackJson.url : null
+            uploadedKey =
+              typeof uploadedPublicUrl === 'string'
+                ? uploadedPublicUrl.replace(/^https?:\/\/[^/]+\//, '')
+                : null
           }
 
-          const r2UploadRes = await fetch(presignJson.presignedUrl, {
-            method: 'PUT',
-            headers: {
-              'Content-Type': file.type,
-            },
-            body: file,
-          })
-
-          if (!r2UploadRes.ok) {
-            throw new Error(`${file.name}: Upload failed`)
+          if (!uploadedPublicUrl) {
+            throw new Error(getUploadConnectivityHint(file.name))
           }
 
           const dimensions = await getImageDimensions(file)
@@ -218,8 +269,8 @@ export default function ProjeDuzenlePage() {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               project_id: project.id,
-              url: presignJson.publicUrl,
-              r2_key: presignJson.key,
+              url: uploadedPublicUrl,
+              r2_key: uploadedKey,
               category,
               file_name: file.name,
               file_size: file.size,
@@ -241,7 +292,8 @@ export default function ProjeDuzenlePage() {
         .map((r) => String(r.reason))
 
       if (failed.length > 0) {
-        throw new Error(failed.join('\n'))
+        const uniqueFailed = Array.from(new Set(failed))
+        throw new Error(uniqueFailed.join('\n'))
       }
 
       loadProject()

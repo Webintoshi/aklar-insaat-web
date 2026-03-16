@@ -92,6 +92,10 @@ function getImageDimensions(file: File): Promise<{ width: number; height: number
   })
 }
 
+function getUploadConnectivityHint(fileName: string): string {
+  return `${fileName}: R2 yukleme istegi tarayicidan gonderilemedi. CORS ayari veya R2 endpoint/domain ayarini kontrol edin.`
+}
+
 export default function YeniProjePage() {
   const router = useRouter()
   const [saving, setSaving] = useState(false)
@@ -191,33 +195,77 @@ export default function YeniProjePage() {
     sortOrder: number
   ): Promise<{ publicUrl: string }> => {
     const fileExtension = getFileExtension(mediaFile.file.name)
+    let uploadedPublicUrl: string | null = null
+    let uploadedKey: string | null = null
 
-    const presignRes = await fetch(`/api/projects/${projectId}/presign`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        category: mediaFile.category,
-        contentType: mediaFile.file.type,
-        fileExtension,
-        fileSize: mediaFile.file.size,
+    try {
+      const presignRes = await fetch(`/api/projects/${projectId}/presign`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          category: mediaFile.category,
+          contentType: mediaFile.file.type,
+          fileExtension,
+          fileSize: mediaFile.file.size,
+        })
       })
-    })
 
-    const presignData = await presignRes.json()
-    if (!presignRes.ok) {
-      throw new Error(presignData?.error || `${mediaFile.file.name}: Presign işlemi başarısız`)
+      const presignData = await presignRes.json()
+      if (!presignRes.ok) {
+        throw new Error(presignData?.error || `${mediaFile.file.name}: Presign işlemi başarısız`)
+      }
+
+      const presignedUrl = typeof presignData?.presignedUrl === 'string' ? presignData.presignedUrl : ''
+      if (!/^https:\/\//i.test(presignedUrl)) {
+        throw new Error(`${mediaFile.file.name}: Gecersiz presigned URL`)
+      }
+
+      const uploadRes = await fetch(presignedUrl, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': mediaFile.file.type,
+        },
+        body: mediaFile.file,
+      })
+
+      if (!uploadRes.ok) {
+        throw new Error(`${mediaFile.file.name}: R2 yüklemesi başarısız`)
+      }
+
+      uploadedPublicUrl = presignData.publicUrl
+      uploadedKey = presignData.key || null
+    } catch (directUploadError) {
+      console.warn('[DIRECT_UPLOAD_FAILED]', directUploadError)
+
+      const formData = new FormData()
+      formData.append('file', mediaFile.file)
+      formData.append('folder', `projects/${projectId}/${mediaFile.category}`)
+
+      const fallbackRes = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData,
+      })
+
+      const fallbackData = await fallbackRes.json().catch(() => ({}))
+      if (!fallbackRes.ok) {
+        if (fallbackRes.status === 413) {
+          throw new Error(`${mediaFile.file.name}: 413 hatasi (sunucu body limiti). R2 CORS duzeltilmeli.`)
+        }
+        throw new Error(
+          fallbackData?.error ||
+            `${mediaFile.file.name}: Yedek yukleme de basarisiz (${fallbackRes.status})`
+        )
+      }
+
+      uploadedPublicUrl = typeof fallbackData?.url === 'string' ? fallbackData.url : null
+      uploadedKey =
+        typeof uploadedPublicUrl === 'string'
+          ? uploadedPublicUrl.replace(/^https?:\/\/[^/]+\//, '')
+          : null
     }
 
-    const uploadRes = await fetch(presignData.presignedUrl, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': mediaFile.file.type,
-      },
-      body: mediaFile.file,
-    })
-
-    if (!uploadRes.ok) {
-      throw new Error(`${mediaFile.file.name}: R2 yüklemesi başarısız`)
+    if (!uploadedPublicUrl) {
+      throw new Error(getUploadConnectivityHint(mediaFile.file.name))
     }
 
     const dimensions = await getImageDimensions(mediaFile.file)
@@ -226,8 +274,8 @@ export default function YeniProjePage() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         project_id: projectId,
-        url: presignData.publicUrl,
-        r2_key: presignData.key,
+        url: uploadedPublicUrl,
+        r2_key: uploadedKey,
         category: mediaFile.category,
         file_name: mediaFile.file.name,
         file_size: mediaFile.file.size,
@@ -242,7 +290,7 @@ export default function YeniProjePage() {
       throw new Error(saveData?.error || `${mediaFile.file.name}: Medya kaydı başarısız`)
     }
 
-    return { publicUrl: presignData.publicUrl }
+    return { publicUrl: uploadedPublicUrl }
   }
 
   // Form gönder
