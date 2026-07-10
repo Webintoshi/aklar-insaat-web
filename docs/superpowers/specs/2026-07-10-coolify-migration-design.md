@@ -25,7 +25,7 @@
 - Node.js: production modu, telemetri kapalı, root olmayan kullanıcı ve yalnızca standalone çıktı.
 - Uygulama portu: `3000`; Coolify health check ana sayfaya HTTP isteği gönderir.
 - Yeniden başlatma: yalnızca hata durumunda ve sınırlı gecikmeyle; sağlıksız konteyner sonsuz hızlı döngüye sokulmaz.
-- React/React DOM `19.2.7`, self-host ortamında Vercel WAF korumasına güvenmemek için uygulanır; Next.js aynı güvenli sürüm çizgisindeki `16.1.7` yamasına yükseltilir.
+- React/React DOM `19.2.7`, self-host ortamında Vercel WAF korumasına güvenmemek için uygulanır; üretim bağımlılık taramasındaki DoS, proxy bypass, XSS ve cache-poisoning açıklarını kapatan Next.js `16.2.10` sürümü kullanılır.
 - `SUPABASE_SERVICE_ROLE_KEY`, `R2_ACCESS_KEY_ID` ve `R2_SECRET_ACCESS_KEY` imaja, GitHub'a veya build loglarına yazılmaz.
 - `NEXT_PUBLIC_*` değerleri istemci paketine girdiği için build aşamasında verilir; aynı değerler runtime'da da tanımlanır.
 

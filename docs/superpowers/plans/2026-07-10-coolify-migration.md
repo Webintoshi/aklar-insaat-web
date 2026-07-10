@@ -6,7 +6,7 @@
 
 **Architecture:** GitHub Actions builds an amd64 multi-stage Docker image and publishes it to public GHCR. Coolify only pulls and runs that image with runtime-only Supabase/R2 secrets; Cloudflare changes after application and TLS checks pass.
 
-**Tech Stack:** Next.js 16.1.7, React/React DOM 19.2.7, Node.js 24 Alpine, Docker Buildx, GitHub Actions, GHCR, Coolify, Cloudflare, Supabase, Cloudflare R2.
+**Tech Stack:** Next.js 16.2.10, React/React DOM 19.2.7, Node.js 24 Alpine, Docker Buildx, GitHub Actions, GHCR, Coolify, Cloudflare, Supabase, Cloudflare R2.
 
 ## Global Constraints
 
@@ -50,13 +50,13 @@ Expected: build succeeds on commit `9ff33c42c1ba98b5d144e3a5a353f89a82cc632c`. I
 Run:
 
 ```powershell
-npm install --save-exact next@16.1.7 react@19.2.7 react-dom@19.2.7
+npm install --save-exact next@16.2.10 react@19.2.7 react-dom@19.2.7
 ```
 
 Expected `package.json` dependency entries:
 
 ```json
-"next": "16.1.7",
+"next": "16.2.10",
 "react": "19.2.7",
 "react-dom": "19.2.7"
 ```
@@ -68,6 +68,7 @@ Add this property at the top of the exported `nextConfig` object in `next.config
 ```ts
 const nextConfig: NextConfig = {
   output: "standalone",
+  outputFileTracingRoot: process.cwd(),
   images: {
 ```
 
