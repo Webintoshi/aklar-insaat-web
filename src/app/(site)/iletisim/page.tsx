@@ -105,7 +105,7 @@ export default function IletisimPage() {
   }
 
   return (
-    <main className="min-h-screen bg-white">
+    <main className="min-h-screen overflow-x-clip bg-white">
       {/* Hero Section */}
       <section className="relative bg-[#1E3A5F] py-16 lg:py-24 overflow-hidden">
         {/* Background Image */}
@@ -480,3 +480,4 @@ export default function IletisimPage() {
     </main>
   )
 }
+
