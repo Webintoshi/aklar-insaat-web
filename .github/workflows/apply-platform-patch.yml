@@ -1,0 +1,27 @@
+name: Apply platform v2 patch
+
+on:
+  push:
+    branches:
+      - codex/aklar-platform-v2
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Apply reviewed local commit
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git am 0001-feat-rebuild-Aklar-platform-on-PostgreSQL.patch
+          git rm 0001-feat-rebuild-Aklar-platform-on-PostgreSQL.patch
+          git rm .github/workflows/apply-platform-patch.yml
+          git commit -m "chore: remove temporary branch bootstrap files"
+          git push origin HEAD:codex/aklar-platform-v2
