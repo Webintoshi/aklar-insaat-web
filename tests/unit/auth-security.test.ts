@@ -48,6 +48,7 @@ describe("buildAuthSecurityOptions", () => {
       secure: true,
       sameSite: "lax",
     });
+    expect(options.advanced.database).toEqual({ generateId: "uuid" });
     expect(options.rateLimit).toMatchObject({
       enabled: true,
       storage: "database",
@@ -57,3 +58,4 @@ describe("buildAuthSecurityOptions", () => {
     });
   });
 });
+
