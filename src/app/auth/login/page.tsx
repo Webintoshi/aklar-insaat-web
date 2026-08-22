@@ -1,63 +1,77 @@
-'use client'
+"use client";
 
-import { useState } from 'react'
-import { createClient } from '@/lib/supabase/client'
-import { Building2, Loader2 } from 'lucide-react'
+import { Building2, Loader2, ShieldCheck } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
+
+import { authClient } from "@/lib/auth-client";
 
 export default function LoginPage() {
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
+  const router = useRouter();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setLoading(true)
-    setError('')
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
+    setLoading(true);
+    setError("");
 
     try {
-      const supabase = createClient()
-      const { error: signInError } = await supabase.auth.signInWithPassword({
+      const result = await authClient.signIn.email({
         email,
         password,
-      })
+        callbackURL: "/admin",
+      });
 
-      if (signInError) {
-        setError(signInError.message || 'Giriş başarısız.')
-        setLoading(false)
-        return
+      if (result.error) {
+        setError(
+          result.error.status === 429
+            ? "Çok fazla giriş denemesi yapıldı. Lütfen 15 dakika sonra tekrar deneyin."
+            : "E-posta veya parola hatalı.",
+        );
+        return;
       }
 
-      // Başarılı - hard redirect
-      window.location.href = '/admin'
-      
-    } catch (err) {
-      setError('Beklenmeyen bir hata oluştu.')
-      setLoading(false)
+      router.push("/admin");
+      router.refresh();
+    } catch {
+      setError("Giriş sırasında beklenmeyen bir hata oluştu.");
+    } finally {
+      setLoading(false);
     }
-  }
+  };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100">
-      <div className="w-full max-w-md">
-        <div className="bg-white rounded-2xl shadow-lg p-8">
-          <div className="text-center mb-8">
-            <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-600 rounded-full mb-4">
-              <Building2 className="w-8 h-8 text-white" />
+    <main className="flex min-h-screen items-center justify-center bg-[#f7f7f8] px-5 py-12">
+      <div className="w-full max-w-[430px]">
+        <div className="rounded-lg border border-[#dedfe3] bg-white px-8 py-10 shadow-[0_18px_55px_rgba(20,22,28,0.08)] sm:px-10">
+          <div className="mb-9 text-center">
+            <div className="mb-5 inline-flex h-14 w-14 items-center justify-center rounded-full bg-[#d40000]">
+              <Building2 className="h-7 w-7 text-white" aria-hidden="true" />
             </div>
-            <h1 className="text-2xl font-bold text-gray-900">Aklar İnşaat</h1>
-            <p className="text-gray-500 mt-2">Admin Girişi</p>
+            <h1 className="text-2xl font-semibold tracking-[-0.02em] text-[#14151a]">
+              Aklar İnşaat
+            </h1>
+            <p className="mt-2 text-sm text-[#686d78]">Yönetim paneli girişi</p>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-6">
+          <form onSubmit={handleSubmit} className="space-y-5">
             {error && (
-              <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-red-600 text-sm">
+              <div
+                role="alert"
+                className="rounded-md border border-red-200 bg-red-50 p-3.5 text-sm text-red-700"
+              >
                 {error}
               </div>
             )}
 
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
+              <label
+                htmlFor="email"
+                className="mb-2 block text-sm font-medium text-[#24262d]"
+              >
                 E-posta
               </label>
               <input
@@ -65,24 +79,29 @@ export default function LoginPage() {
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full px-4 py-3 border border-gray-400 bg-white text-gray-900 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors"
-                placeholder="admin@example.com"
+                autoComplete="email"
+                className="h-12 w-full rounded-md border border-[#cfd2d8] bg-white px-3.5 text-[15px] text-[#15171c] outline-none transition focus:border-[#d40000] focus:ring-2 focus:ring-red-100"
+                placeholder="yonetim@orduaklarinsaat.com"
                 required
                 disabled={loading}
               />
             </div>
 
             <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
-                Şifre
+              <label
+                htmlFor="password"
+                className="mb-2 block text-sm font-medium text-[#24262d]"
+              >
+                Parola
               </label>
               <input
                 id="password"
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-4 py-3 border border-gray-400 bg-white text-gray-900 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors"
-                placeholder="••••••••"
+                autoComplete="current-password"
+                className="h-12 w-full rounded-md border border-[#cfd2d8] bg-white px-3.5 text-[15px] text-[#15171c] outline-none transition focus:border-[#d40000] focus:ring-2 focus:ring-red-100"
+                placeholder="Parolanız"
                 required
                 disabled={loading}
               />
@@ -91,11 +110,11 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full flex items-center justify-center py-3 px-4 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors disabled:opacity-50"
+              className="flex h-12 w-full items-center justify-center rounded-md bg-[#d40000] px-4 text-sm font-semibold text-white transition hover:bg-[#b90000] disabled:cursor-not-allowed disabled:opacity-55"
             >
               {loading ? (
                 <>
-                  <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                  <Loader2 className="mr-2 h-5 w-5 animate-spin" aria-hidden="true" />
                   Giriş yapılıyor...
                 </>
               ) : (
@@ -103,8 +122,12 @@ export default function LoginPage() {
               )}
             </button>
           </form>
+          <p className="mt-6 flex items-center justify-center gap-2 text-xs text-[#7a7f89]">
+            <ShieldCheck className="h-4 w-4" aria-hidden="true" />
+            Güvenli sahip oturumu · 12 saat
+          </p>
         </div>
       </div>
-    </div>
-  )
+    </main>
+  );
 }

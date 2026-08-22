@@ -1,85 +1,121 @@
-'use client'
+"use client";
 
-import Link from 'next/link'
-import { usePathname } from 'next/navigation'
-import { 
-  LayoutDashboard, 
-  FileText, 
-  Building2, 
-  FolderKanban, 
-  MessageSquare,
+import {
+  FileText,
+  FolderKanban,
+  Gauge,
+  Image,
   LogOut,
-  Home,
-  Info,
-  Video,
-  BarChart3,
   MessageCircle,
-  HardHat,
-} from 'lucide-react'
-import { createClient } from '@/lib/supabase/client'
+  MessageSquare,
+  Settings2,
+  X,
+} from "lucide-react";
+import NextImage from "next/image";
+import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
+
+import { authClient } from "@/lib/auth-client";
 
 const navigation = [
-  { name: 'Ana Sayfa', href: '/admin', icon: LayoutDashboard },
-  { name: 'Hero Bölümü', href: '/admin/hero', icon: Home },
-  { name: 'Hakkımızda', href: '/admin/about', icon: Info },
-  { name: 'Video Bölümü', href: '/admin/video', icon: Video },
-  { name: 'İstatistikler', href: '/admin/infocards', icon: BarChart3 },
-  { name: 'Sayfalar', href: '/admin/pages', icon: FileText },
-  { name: 'Projeler', href: '/admin/projeler', icon: HardHat },
-  { name: 'Tamamlanmış Projeler', href: '/admin/projects/completed', icon: Building2 },
-  { name: 'Devam Eden Projeler', href: '/admin/projects/ongoing', icon: FolderKanban },
-  { name: 'İletişim Mesajları', href: '/admin/messages', icon: MessageSquare },
-  { name: 'WhatsApp', href: '/admin/whatsapp', icon: MessageCircle },
-]
+  { name: "Genel Bakış", href: "/admin", icon: Gauge },
+  { name: "Projeler", href: "/admin/projects", icon: FolderKanban },
+  { name: "Medya Merkezi", href: "/admin/media", icon: Image },
+  { name: "Site İçerikleri", href: "/admin/content", icon: FileText },
+  { name: "Mesajlar", href: "/admin/messages", icon: MessageSquare },
+  { name: "WhatsApp", href: "/admin/whatsapp", icon: MessageCircle },
+  { name: "SEO ve Ayarlar", href: "/admin/settings", icon: Settings2 },
+] as const;
 
-export function Sidebar() {
-  const pathname = usePathname()
+type SidebarProps = {
+  open: boolean;
+  onClose: () => void;
+};
 
-  const handleSignOut = async () => {
-    const supabase = createClient()
-    await supabase.auth.signOut()
-    window.location.href = '/auth/login'
+export function Sidebar({ open, onClose }: SidebarProps) {
+  const pathname = usePathname();
+  const router = useRouter();
+
+  async function handleSignOut() {
+    await authClient.signOut();
+    router.push("/auth/login");
+    router.refresh();
   }
 
   return (
-    <div className="flex flex-col w-64 bg-white border-r border-gray-200">
-      <div className="flex items-center justify-center h-16 bg-white px-4">
-        <img 
-          src="/logoypng_48.png" 
-          alt="Aklar İnşaat" 
-          className="max-h-12 max-w-full w-auto object-contain"
-        />
-      </div>
-      
-      <nav className="flex-1 px-2 py-4 space-y-1 overflow-y-auto">
-        {navigation.map((item) => {
-          const isActive = pathname === item.href || pathname.startsWith(item.href + '/')
-          return (
-            <Link
-              key={item.name}
-              href={item.href}
-              className={`flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-colors ${
-                isActive
-                  ? 'bg-blue-600 text-white'
-                  : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'
-              }`}
-            >
-              <item.icon className="w-5 h-5 mr-3" />
-              {item.name}
-            </Link>
-          )
-        })}
-      </nav>
-
-      <div className="p-4 border-t border-gray-200">
+    <>
+      {open && (
         <button
-          onClick={handleSignOut}
-          className="flex items-center w-full px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
-        >
-          <LogOut className="w-5 h-5 mr-3" />
-          Çıkış Yap
-        </button>
-      </div>
-    </div>
-  )
+          type="button"
+          aria-label="Menüyü kapat"
+          className="fixed inset-0 z-40 bg-black/25 lg:hidden"
+          onClick={onClose}
+        />
+      )}
+      <aside
+        className={`fixed inset-y-0 left-0 z-50 flex w-[252px] flex-col border-r border-[#e0e2e6] bg-white transition-transform duration-200 lg:translate-x-0 ${open ? "translate-x-0" : "-translate-x-full"}`}
+      >
+        <div className="flex h-[138px] items-center justify-between px-6">
+          <NextImage
+            src="/logoypng_48.png"
+            alt="Aklar İnşaat"
+            width={186}
+            height={58}
+            className="h-auto w-[184px] object-contain"
+            priority
+          />
+          <button
+            type="button"
+            aria-label="Menüyü kapat"
+            onClick={onClose}
+            className="rounded-md p-2 text-[#555b66] hover:bg-[#f3f3f4] lg:hidden"
+          >
+            <X className="h-5 w-5" aria-hidden="true" />
+          </button>
+        </div>
+
+        <nav aria-label="Admin menüsü" className="flex-1 space-y-1 px-3 py-1">
+          {navigation.map((item) => {
+            const active =
+              item.href === "/admin"
+                ? pathname === item.href
+                : pathname === item.href || pathname.startsWith(`${item.href}/`);
+
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                onClick={onClose}
+                className={`relative flex h-12 items-center gap-4 rounded-md px-5 text-[14px] font-medium transition-colors focus-visible:outline-offset-[-2px] ${
+                  active
+                    ? "bg-[#fff2f2] text-[#d40000]"
+                    : "text-[#20232a] hover:bg-[#f6f6f7]"
+                }`}
+              >
+                {active && (
+                  <span
+                    aria-hidden="true"
+                    className="absolute -left-3 top-0 h-full w-[3px] bg-[#d40000]"
+                  />
+                )}
+                <item.icon className="h-[19px] w-[19px] stroke-[1.7]" aria-hidden="true" />
+                {item.name}
+              </Link>
+            );
+          })}
+        </nav>
+
+        <div className="px-5 pb-10 pt-5">
+          <button
+            type="button"
+            onClick={handleSignOut}
+            className="flex h-11 w-full items-center gap-4 rounded-md px-3 text-sm font-medium text-[#22252c] transition hover:bg-[#f6f6f7]"
+          >
+            <LogOut className="h-5 w-5 stroke-[1.7]" aria-hidden="true" />
+            Çıkış Yap
+          </button>
+        </div>
+      </aside>
+    </>
+  );
 }

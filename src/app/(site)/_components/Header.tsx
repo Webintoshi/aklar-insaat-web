@@ -3,7 +3,7 @@
 import Image from 'next/image'
 import Link from 'next/link'
 import { useState } from 'react'
-import { Menu, X, Phone, ChevronDown, Instagram, LayoutGrid } from 'lucide-react'
+import { Menu, X, Phone, ChevronDown, Instagram, Building2 } from 'lucide-react'
 import { AnimatePresence, motion } from 'framer-motion'
 
 const navLinks = [
@@ -115,11 +115,11 @@ export function Header({ phone = '0532 762 42 67' }: HeaderProps) {
 
             <div className="flex items-center gap-4">
               <Link
-                href="/daire-secimi"
+                href="/projeler"
                 className="hidden sm:flex items-center gap-2 px-5 py-2.5 bg-[#CF000C] text-white text-sm font-semibold rounded hover:bg-[#a8000a] transition-colors"
               >
-                <LayoutGrid className="w-4 h-4" />
-                Daire Seçimi
+                <Building2 className="w-4 h-4" />
+                Projeler
               </Link>
 
               <button
@@ -180,12 +180,12 @@ export function Header({ phone = '0532 762 42 67' }: HeaderProps) {
 
                 <div className="mt-8 pt-8 border-t border-gray-200">
                   <Link
-                    href="/daire-secimi"
+                    href="/projeler"
                     onClick={() => setIsMobileMenuOpen(false)}
                     className="flex items-center justify-center gap-2 w-full py-3 bg-[#CF000C] text-white font-semibold rounded-lg hover:bg-[#a8000a] transition-colors"
                   >
-                    <LayoutGrid className="w-4 h-4" />
-                    Daire Seçimi
+                    <Building2 className="w-4 h-4" />
+                    Projeler
                   </Link>
                 </div>
               </div>

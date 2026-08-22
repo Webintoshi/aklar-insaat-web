@@ -108,7 +108,7 @@ export function InfoCardsSection({ data }: InfoCardsSectionProps) {
   )
 
   const [selectedIndex, setSelectedIndex] = useState(0)
-  const [scrollSnaps, setScrollSnaps] = useState<number[]>([])
+  const scrollSnaps = cards.map((card) => card.id)
   const [canScrollPrev, setCanScrollPrev] = useState(false)
   const [canScrollNext, setCanScrollNext] = useState(false)
 
@@ -125,11 +125,11 @@ export function InfoCardsSection({ data }: InfoCardsSectionProps) {
 
   useEffect(() => {
     if (!emblaApi) return
-    setScrollSnaps(emblaApi.scrollSnapList())
     emblaApi.on('select', onSelect)
     emblaApi.on('reInit', onSelect)
-    onSelect()
+    const initialSelection = window.setTimeout(onSelect, 0)
     return () => {
+      window.clearTimeout(initialSelection)
       emblaApi.off('select', onSelect)
       emblaApi.off('reInit', onSelect)
     }

@@ -1,46 +1,36 @@
-import { NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { createHmac } from "node:crypto";
 
-/**
- * POST /api/whatsapp/track
- * Tıklama analitiği kaydet
- * Fire-and-forget pattern
- */
-export async function POST(request: Request) {
+import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
+
+import { db } from "@/db/client";
+import { whatsappClickEvents } from "@/db/schema";
+
+const inputSchema = z.object({
+  agentId: z.uuid(),
+  pagePath: z.string().startsWith("/").max(500),
+  referrer: z.string().max(2_000).nullable().optional(),
+});
+
+export async function POST(request: NextRequest) {
   try {
-    const body = await request.json()
-    const { config_id, agent_id, page_url, referrer, device_type, session_id } = body
+    const input = inputSchema.parse(await request.json());
+    const ip =
+      request.headers.get("cf-connecting-ip") ??
+      request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
+      "unknown";
+    const secret = process.env.IP_HASH_SECRET;
+    if (!secret) throw new Error("IP_HASH_SECRET ortam değişkeni tanımlı değil.");
 
-    // Validasyon
-    if (!config_id) {
-      return NextResponse.json(
-        { error: 'Config ID required' },
-        { status: 400 }
-      )
-    }
-
-    const supabase = await createClient()
-
-    // Async olarak kaydet (await kullanmayarak hızlı yanıt)
-    supabase
-      .rpc('track_whatsapp_click', {
-        p_config_id: config_id,
-        p_agent_id: agent_id || null,
-        p_page_url: page_url?.substring(0, 500) || null,
-        p_referrer: referrer?.substring(0, 500) || null,
-        p_device_type: device_type || 'unknown',
-      })
-      .then(({ error }) => {
-        if (error) {
-          console.error('Track error:', error)
-        }
-      })
-
-    // Hemen 200 dön (fire-and-forget)
-    return NextResponse.json({ success: true })
-  } catch (error) {
-    console.error('WhatsApp track error:', error)
-    // Track endpoint'inde hata da 200 dönelim ki widget çalışmaya devam etsin
-    return NextResponse.json({ success: true })
+    await db.insert(whatsappClickEvents).values({
+      agentId: input.agentId,
+      pagePath: input.pagePath,
+      referrer: input.referrer,
+      ipHash: createHmac("sha256", secret).update(ip).digest("hex"),
+      userAgent: request.headers.get("user-agent"),
+    });
+    return new NextResponse(null, { status: 204 });
+  } catch {
+    return new NextResponse(null, { status: 204 });
   }
 }

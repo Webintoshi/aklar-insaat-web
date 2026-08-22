@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { LayoutGrid, ArrowRight } from 'lucide-react'
+import { Building2, ArrowRight } from 'lucide-react'
 
 export function PreFooter() {
   return (
@@ -33,11 +33,11 @@ export function PreFooter() {
           {/* CTA Button */}
           <div>
             <Link
-              href="/daire-secimi"
+              href="/projeler"
               className="group inline-flex items-center gap-3 px-8 py-4 bg-[#CF000C] text-white font-semibold text-lg rounded-lg hover:bg-[#a8000a] transition-all duration-300 hover:shadow-xl hover:shadow-[#CF000C]/25 hover:-translate-y-1"
             >
-              <LayoutGrid className="w-5 h-5" />
-              Daire Seçimi
+              <Building2 className="w-5 h-5" />
+              Projeleri İncele
               <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
             </Link>
           </div>

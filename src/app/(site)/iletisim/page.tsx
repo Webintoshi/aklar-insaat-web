@@ -12,7 +12,6 @@ import {
   Instagram,
   ArrowUpRight,
   CheckCircle2,
-  Building2,
   MessageSquare,
   ChevronDown
 } from 'lucide-react'
@@ -71,20 +70,38 @@ export default function IletisimPage() {
     email: '',
     phone: '',
     subject: '',
-    message: ''
+    message: '',
+    company: ''
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isSubmitted, setIsSubmitted] = useState(false)
+  const [submitError, setSubmitError] = useState('')
   const [openFaq, setOpenFaq] = useState<number | null>(0)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsSubmitting(true)
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1500))
-    setIsSubmitting(false)
-    setIsSubmitted(true)
-    setTimeout(() => setIsSubmitted(false), 3000)
+    setSubmitError('')
+
+    try {
+      const response = await fetch('/api/contact', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData),
+      })
+      const result = response.status === 204 ? {} : await response.json()
+      if (!response.ok) {
+        throw new Error(result.error || 'Mesaj gönderilemedi.')
+      }
+
+      setIsSubmitted(true)
+      setFormData({ name: '', email: '', phone: '', subject: '', message: '', company: '' })
+      setTimeout(() => setIsSubmitted(false), 3000)
+    } catch (error) {
+      setSubmitError(error instanceof Error ? error.message : 'Mesaj gönderilemedi.')
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   return (
@@ -257,10 +274,29 @@ export default function IletisimPage() {
                 </div>
 
                 <form onSubmit={handleSubmit} className="space-y-5">
+                  <div className="sr-only" aria-hidden="true">
+                    <label htmlFor="company">Şirket</label>
+                    <input
+                      id="company"
+                      name="company"
+                      type="text"
+                      tabIndex={-1}
+                      autoComplete="off"
+                      value={formData.company}
+                      onChange={(e) => setFormData({...formData, company: e.target.value})}
+                    />
+                  </div>
+                  {submitError && (
+                    <p role="alert" className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+                      {submitError}
+                    </p>
+                  )}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                     <div className="space-y-2">
-                      <label className="text-sm font-medium text-slate-700">Adınız Soyadınız</label>
+                      <label htmlFor="contact-name" className="text-sm font-medium text-slate-700">Adınız Soyadınız</label>
                       <input
+                        id="contact-name"
+                        name="name"
                         type="text"
                         value={formData.name}
                         onChange={(e) => setFormData({...formData, name: e.target.value})}
@@ -270,8 +306,10 @@ export default function IletisimPage() {
                       />
                     </div>
                     <div className="space-y-2">
-                      <label className="text-sm font-medium text-slate-700">E-posta Adresiniz</label>
+                      <label htmlFor="contact-email" className="text-sm font-medium text-slate-700">E-posta Adresiniz</label>
                       <input
+                        id="contact-email"
+                        name="email"
                         type="email"
                         value={formData.email}
                         onChange={(e) => setFormData({...formData, email: e.target.value})}
@@ -284,8 +322,10 @@ export default function IletisimPage() {
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                     <div className="space-y-2">
-                      <label className="text-sm font-medium text-slate-700">Telefon Numaranız</label>
+                      <label htmlFor="contact-phone" className="text-sm font-medium text-slate-700">Telefon Numaranız</label>
                       <input
+                        id="contact-phone"
+                        name="phone"
                         type="tel"
                         value={formData.phone}
                         onChange={(e) => setFormData({...formData, phone: e.target.value})}
@@ -294,8 +334,10 @@ export default function IletisimPage() {
                       />
                     </div>
                     <div className="space-y-2">
-                      <label className="text-sm font-medium text-slate-700">Konu</label>
+                      <label htmlFor="contact-subject" className="text-sm font-medium text-slate-700">Konu</label>
                       <select
+                        id="contact-subject"
+                        name="subject"
                         value={formData.subject}
                         onChange={(e) => setFormData({...formData, subject: e.target.value})}
                         className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:border-[#CF000C] focus:ring-2 focus:ring-[#CF000C]/20 outline-none transition-all bg-slate-50/50"
@@ -311,8 +353,10 @@ export default function IletisimPage() {
                   </div>
 
                   <div className="space-y-2">
-                    <label className="text-sm font-medium text-slate-700">Mesajınız</label>
+                    <label htmlFor="contact-message" className="text-sm font-medium text-slate-700">Mesajınız</label>
                     <textarea
+                      id="contact-message"
+                      name="message"
                       value={formData.message}
                       onChange={(e) => setFormData({...formData, message: e.target.value})}
                       rows={5}

@@ -1,247 +1,250 @@
-﻿import { createClient } from '@/lib/supabase/server'
-import Image from 'next/image'
-import Link from 'next/link'
-import { notFound } from 'next/navigation'
-import { ArrowLeft, MapPin, Building2, CheckCircle2, Clock3, PhoneCall, ChevronRight } from 'lucide-react'
-import { MediaGallerySection } from './MediaGallerySection'
+import { and, asc, eq } from "drizzle-orm";
+import {
+  ArrowLeft,
+  Building2,
+  CheckCircle2,
+  Clock3,
+  ExternalLink,
+  MapPin,
+  Maximize,
+} from "lucide-react";
+import type { Metadata } from "next";
+import Image from "next/image";
+import Link from "next/link";
+import { notFound } from "next/navigation";
 
-export const revalidate = 300
+import { db } from "@/db/client";
+import {
+  mediaAssets,
+  projectFeatures,
+  projectMedia,
+  projects,
+  projectUnitTypes,
+} from "@/db/schema";
 
-interface RouteParams {
-  slug: string
-}
+import { MediaGallerySection } from "./MediaGallerySection";
 
-interface ProjectMedia {
-  id: string
-  url: string
-  category: 'about' | 'exterior' | 'interior' | 'location'
-  sort_order: number | null
-}
+export const revalidate = 300;
 
-interface ProjectRecord {
-  id: string
-  name: string | null
-  title: string | null
-  slug: string
-  status: string | null
-  project_status: 'completed' | 'ongoing' | null
-  about_text: string | null
-  about_image_url: string | null
-  cta_text: string | null
-  apartment_options: string | null
-  neighborhood: string | null
-  location_description: string | null
-  location_image_url: string | null
-  meta_title: string | null
-  meta_desc: string | null
-}
-
-async function getProjectDetail(slug: string): Promise<{ project: ProjectRecord; media: ProjectMedia[] } | null> {
-  const supabase = await createClient()
-
-  const { data: project, error: projectError } = await supabase
-    .from('projects')
-    .select('*')
-    .eq('slug', slug)
-    .or('status.eq.published,is_published.eq.true')
-    .single()
-
-  if (projectError || !project) {
-    return null
-  }
-
-  const { data: media } = await supabase
-    .from('project_media')
-    .select('id,url,category,sort_order')
-    .eq('project_id', project.id)
-    .order('sort_order', { ascending: true })
-
-  return {
-    project: project as ProjectRecord,
-    media: (media || []) as ProjectMedia[],
-  }
-}
-
-export async function generateMetadata({ params }: { params: Promise<RouteParams> }) {
-  const { slug } = await params
-  const detail = await getProjectDetail(slug)
-
-  if (!detail) {
-    return {
-      title: 'Proje Bulunamadı | Aklar İnşaat',
-      description: 'İstenen proje kaydı bulunamadı.',
-    }
-  }
-
-  const projectName = detail.project.name || detail.project.title || 'Proje Detayı'
-
-  return {
-    title: detail.project.meta_title || `${projectName} | Aklar İnşaat`,
-    description: detail.project.meta_desc || detail.project.about_text || 'Aklar İnşaat proje detay sayfası.',
-  }
-}
-
-function StatusBadge({ status }: { status: ProjectRecord['project_status'] }) {
-  if (status === 'completed') {
-    return (
-      <span className="inline-flex items-center gap-2 rounded-full bg-blue-600/10 px-4 py-2 text-sm font-semibold text-blue-700">
-        <CheckCircle2 className="h-4 w-4" />
-        Tamamlandı
-      </span>
+async function getProjectDetail(slug: string) {
+  const [project] = await db
+    .select()
+    .from(projects)
+    .where(
+      and(
+        eq(projects.slug, slug),
+        eq(projects.publicationStatus, "published"),
+      ),
     )
-  }
+    .limit(1);
+  if (!project) return null;
 
-  return (
-    <span className="inline-flex items-center gap-2 rounded-full bg-amber-500/15 px-4 py-2 text-sm font-semibold text-amber-700">
-      <Clock3 className="h-4 w-4" />
-      Devam Ediyor
-    </span>
-  )
+  const [media, units, features] = await Promise.all([
+    db
+      .select({
+        id: mediaAssets.id,
+        objectKey: mediaAssets.objectKey,
+        category: projectMedia.category,
+        altText: projectMedia.altText,
+      })
+      .from(projectMedia)
+      .innerJoin(
+        mediaAssets,
+        and(
+          eq(projectMedia.mediaAssetId, mediaAssets.id),
+          eq(mediaAssets.status, "active"),
+        ),
+      )
+      .where(eq(projectMedia.projectId, project.id))
+      .orderBy(asc(projectMedia.category), asc(projectMedia.position)),
+    db
+      .select()
+      .from(projectUnitTypes)
+      .where(eq(projectUnitTypes.projectId, project.id))
+      .orderBy(asc(projectUnitTypes.position)),
+    db
+      .select()
+      .from(projectFeatures)
+      .where(eq(projectFeatures.projectId, project.id))
+      .orderBy(asc(projectFeatures.position)),
+  ]);
+  const mediaBase = (
+    process.env.NEXT_PUBLIC_R2_PUBLIC_URL ||
+    "https://media.orduaklarinsaat.com"
+  ).replace(/\/+$/, "");
+
+  return {
+    project,
+    units,
+    features,
+    media: media.map((item) => ({
+      ...item,
+      url: mediaBase + "/" + item.objectKey,
+    })),
+  };
 }
 
-export default async function ProjeDetayPage({ params }: { params: Promise<RouteParams> }) {
-  const { slug } = await params
-  const detail = await getProjectDetail(slug)
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}): Promise<Metadata> {
+  const detail = await getProjectDetail((await params).slug);
+  if (!detail) return { title: "Proje Bulunamadı" };
 
-  if (!detail) {
-    notFound()
-  }
+  const cover = detail.media.find((item) => item.category === "cover");
+  return {
+    title: detail.project.seoTitle || detail.project.name,
+    description:
+      detail.project.seoDescription || detail.project.shortDescription || undefined,
+    alternates: { canonical: "/projeler/" + detail.project.slug },
+    openGraph: {
+      title: detail.project.seoTitle || detail.project.name,
+      description:
+        detail.project.seoDescription || detail.project.shortDescription || undefined,
+      images: cover ? [{ url: cover.url }] : undefined,
+    },
+  };
+}
 
-  const { project, media } = detail
-  const projectName = project.name || project.title || 'Proje Detayı'
+export default async function ProjectDetailPage({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}) {
+  const detail = await getProjectDetail((await params).slug);
+  if (!detail) notFound();
 
-  const aboutImage = media.find((m) => m.category === 'about')?.url || project.about_image_url
-  const exteriorImages = media.filter((m) => m.category === 'exterior')
-  const interiorImages = media.filter((m) => m.category === 'interior')
-  const locationImage = media.find((m) => m.category === 'location')?.url || project.location_image_url
+  const { project, media, units, features } = detail;
+  const cover = media.find((item) => item.category === "cover");
+  const exterior = media.filter((item) => item.category === "exterior");
+  const interior = media.filter((item) => item.category === "interior");
+  const location = media.find((item) => item.category === "location");
 
   return (
-    <div className="min-h-screen bg-[#f5f7fa]">
-      <section className="relative overflow-hidden bg-gradient-to-br from-[#0f1d2f] via-[#1E3A5F] to-[#2E5A8F] text-white">
-        <div className="absolute inset-0 opacity-15">
-          {aboutImage ? <Image src={aboutImage} alt="" fill className="object-cover" sizes="100vw" priority /> : null}
-        </div>
-        <div className="container mx-auto px-4 py-10 lg:py-14 relative z-10">
-          <Link href="/projeler" className="mb-8 inline-flex items-center text-white/85 transition hover:text-white">
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Projelere Dön
+    <main className="min-h-screen bg-[#f5f7fa]">
+      <section className="relative overflow-hidden bg-[#132a44] text-white">
+        {cover && (
+          <Image
+            src={cover.url}
+            alt=""
+            fill
+            className="object-cover opacity-25"
+            sizes="100vw"
+            priority
+          />
+        )}
+        <div className="container relative z-10 mx-auto px-4 py-12 sm:px-6 lg:px-8 lg:py-20">
+          <Link href="/projeler" className="inline-flex items-center text-sm text-white/80">
+            <ArrowLeft className="mr-2 h-4 w-4" /> Projelere Dön
           </Link>
-
-          <div className="grid gap-8 lg:grid-cols-12 lg:items-end">
-            <div className="lg:col-span-8">
-              <StatusBadge status={project.project_status} />
-              <h1 className="mt-5 text-4xl font-semibold leading-tight md:text-6xl">{projectName}</h1>
-              <p className="mt-5 max-w-3xl text-base text-white/90 md:text-lg">
-                {project.about_text || 'Bu proje için detaylı tanıtım metni yakında eklenecektir.'}
-              </p>
-            </div>
-
-            <div className="lg:col-span-4">
-              <div className="rounded-2xl border border-white/25 bg-white/10 p-6 backdrop-blur-md">
-                <p className="text-xs uppercase tracking-[0.18em] text-white/70">Hızlı Bilgi</p>
-                <p className="mt-3 text-2xl font-semibold">{project.apartment_options || 'Daire seçenekleri yakında'}</p>
-                <p className="mt-2 text-white/80">{project.neighborhood || 'Konum bilgisi güncelleniyor'}</p>
-                <a
-                  href="#konum"
-                  className="mt-6 inline-flex items-center rounded-xl bg-[#CF000C] px-5 py-3 text-sm font-semibold transition hover:bg-[#990000]"
-                >
-                  {project.cta_text || 'Konumu İncele'}
-                  <ChevronRight className="ml-1 h-4 w-4" />
-                </a>
-              </div>
-            </div>
+          <div className="mt-9 max-w-4xl">
+            <span className="inline-flex items-center gap-2 rounded-full bg-white/12 px-4 py-2 text-sm font-semibold">
+              {project.constructionStage === "completed" ? (
+                <CheckCircle2 className="h-4 w-4" />
+              ) : (
+                <Clock3 className="h-4 w-4" />
+              )}
+              {project.constructionStage === "completed" ? "Tamamlandı" : "Devam Ediyor"}
+            </span>
+            <h1 className="mt-5 text-4xl font-semibold leading-tight md:text-6xl">
+              {project.name}
+            </h1>
+            <p className="mt-5 max-w-3xl text-lg leading-8 text-white/85">
+              {project.shortDescription}
+            </p>
           </div>
         </div>
       </section>
 
-      <main className="container mx-auto space-y-12 px-4 py-12 lg:space-y-16">
+      <div className="container mx-auto space-y-12 px-4 py-12 sm:px-6 lg:px-8 lg:py-16">
         <section className="grid gap-8 lg:grid-cols-12">
-          <div className="lg:col-span-7 overflow-hidden rounded-3xl bg-white shadow-xl">
-            {aboutImage ? (
-              <div className="relative aspect-[3/4] w-full sm:aspect-[4/5] lg:aspect-[4/3] lg:min-h-[430px]">
-                <Image
-                  src={aboutImage}
-                  alt={projectName}
-                  fill
-                  className="object-cover object-center"
-                  sizes="(max-width: 640px) 100vw, (max-width: 1024px) 90vw, 58vw"
-                />
+          <div className="overflow-hidden rounded-3xl bg-white shadow-xl lg:col-span-7">
+            {cover ? (
+              <div className="relative aspect-[4/3] min-h-[340px]">
+                <Image src={cover.url} alt={cover.altText || project.name} fill className="object-cover" sizes="(max-width: 1024px) 100vw, 58vw" />
               </div>
             ) : (
-              <div className="flex aspect-[3/4] min-h-[300px] items-center justify-center bg-gray-100 text-gray-300 sm:aspect-[4/5] lg:aspect-[4/3] lg:min-h-[430px]">
-                <Building2 className="h-16 w-16" />
+              <div className="flex min-h-[430px] items-center justify-center bg-slate-100">
+                <Building2 className="h-16 w-16 text-slate-300" />
               </div>
             )}
           </div>
-
-          <div className="lg:col-span-5 rounded-3xl bg-white p-8 shadow-xl">
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#2E5A8F]">Proje Özeti</p>
-            <h2 className="mt-3 text-3xl font-semibold text-[#0F1D2F]">Mimari ve Yaşam Kurgusu</h2>
-            <p className="mt-5 text-gray-600">
-              {project.about_text || 'Proje açıklaması henüz admin panelinden doldurulmadı.'}
+          <div className="rounded-3xl bg-white p-8 shadow-xl lg:col-span-5">
+            <h2 className="text-3xl font-semibold text-[#0F1D2F]">Proje Hakkında</h2>
+            <p className="mt-5 whitespace-pre-line leading-7 text-slate-600">
+              {project.longDescription}
             </p>
-            <ul className="mt-6 space-y-3 text-sm text-gray-700">
-              <li className="rounded-lg bg-[#f4f7fb] px-4 py-3">Daire Seçenekleri: {project.apartment_options || 'Belirtilmedi'}</li>
-              <li className="rounded-lg bg-[#f4f7fb] px-4 py-3">Mahalle: {project.neighborhood || 'Belirtilmedi'}</li>
-              <li className="rounded-lg bg-[#f4f7fb] px-4 py-3">Durum: {project.project_status === 'completed' ? 'Tamamlandı' : 'Devam Ediyor'}</li>
-            </ul>
+            <div className="mt-7 space-y-3">
+              {units.map((unit) => (
+                <div key={unit.id} className="flex items-center justify-between rounded-xl bg-slate-50 px-4 py-3 text-sm">
+                  <span className="font-semibold">{unit.label}</span>
+                  <span className="flex items-center gap-2 text-slate-600">
+                    <Maximize className="h-4 w-4" />
+                    {unit.areaMin === unit.areaMax
+                      ? String(unit.areaMin)
+                      : String(unit.areaMin) + "–" + String(unit.areaMax)} m²
+                  </span>
+                </div>
+              ))}
+            </div>
+            {features.length > 0 && (
+              <ul className="mt-6 grid gap-2 sm:grid-cols-2">
+                {features.map((feature) => (
+                  <li key={feature.id} className="flex items-center gap-2 text-sm text-slate-600">
+                    <CheckCircle2 className="h-4 w-4 text-[#CF000C]" /> {feature.name}
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
         </section>
 
-        {exteriorImages.length > 0 ? (
+        {exterior.length > 0 && (
           <MediaGallerySection
-            title="Dış Mekan"
-            projectName={projectName}
+            title="Dış Mekân"
+            projectName={project.name}
             imageType="dış mekan"
-            images={exteriorImages.map((image) => ({ id: image.id, url: image.url }))}
+            images={exterior}
           />
-        ) : null}
-
-        {interiorImages.length > 0 ? (
+        )}
+        {interior.length > 0 && (
           <MediaGallerySection
-            title="İç Mekan"
-            projectName={projectName}
+            title="İç Mekân"
+            projectName={project.name}
             imageType="iç mekan"
-            images={interiorImages.map((image) => ({ id: image.id, url: image.url }))}
+            images={interior}
           />
-        ) : null}
+        )}
 
         <section id="konum" className="grid gap-8 lg:grid-cols-12">
-          <div className="lg:col-span-7 overflow-hidden rounded-3xl bg-white shadow-xl">
-            {locationImage ? (
-              <div className="relative h-full min-h-[320px] w-full">
-                <Image src={locationImage} alt={`${projectName} konum`} fill className="object-cover" sizes="(max-width: 1024px) 100vw, 58vw" />
+          <div className="overflow-hidden rounded-3xl bg-white shadow-xl lg:col-span-7">
+            {location ? (
+              <div className="relative min-h-[360px]">
+                <Image src={location.url} alt={location.altText || project.name + " konum"} fill className="object-cover" sizes="(max-width: 1024px) 100vw, 58vw" />
               </div>
             ) : (
-              <div className="flex min-h-[320px] items-center justify-center bg-gray-100 text-gray-300">
-                <MapPin className="h-16 w-16" />
+              <div className="flex min-h-[360px] items-center justify-center bg-slate-100">
+                <MapPin className="h-16 w-16 text-slate-300" />
               </div>
             )}
           </div>
-
-          <div className="lg:col-span-5 rounded-3xl bg-white p-8 shadow-xl">
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#2E5A8F]">Konum</p>
-            <h3 className="mt-2 text-3xl font-semibold text-[#0F1D2F]">Ulaşım ve Çevre</h3>
-            <p className="mt-5 text-gray-600">
-              {project.location_description || 'Konum açıklaması henüz eklenmedi. Ayrıntılı bilgi için bizimle iletişime geçebilirsiniz.'}
+          <div className="rounded-3xl bg-white p-8 shadow-xl lg:col-span-5">
+            <h2 className="text-3xl font-semibold text-[#0F1D2F]">Konum</h2>
+            <p className="mt-5 text-slate-600">
+              {[project.neighborhood, project.district, project.city]
+                .filter(Boolean)
+                .join(", ")}
             </p>
-
-            <div className="mt-8 rounded-2xl border border-[#25D366]/25 bg-[#25D366]/10 p-5">
-              <p className="font-semibold text-[#0F1D2F]">Detaylı Bilgi Alın</p>
-              <p className="mt-2 text-sm text-gray-700">Satış ekibimizle hemen görüşüp fiyat ve ödeme planlarını öğrenin.</p>
-              <a
-                href="https://wa.me/905327624267?text=Merhaba, proje hakkında detaylı bilgi almak istiyorum."
-                target="_blank"
-                rel="noopener noreferrer"
-                className="mt-4 inline-flex items-center rounded-xl bg-[#25D366] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#128C7E]"
-              >
-                <PhoneCall className="mr-2 h-4 w-4" />
-                WhatsApp ile İletişim
+            <p className="mt-2 text-sm leading-6 text-slate-500">{project.address}</p>
+            {project.mapsUrl && (
+              <a href={project.mapsUrl} target="_blank" rel="noopener noreferrer" className="mt-6 inline-flex items-center gap-2 rounded-xl bg-[#CF000C] px-5 py-3 text-sm font-semibold text-white">
+                Google Maps’te Aç <ExternalLink className="h-4 w-4" />
               </a>
-            </div>
+            )}
           </div>
         </section>
-      </main>
-    </div>
-  )
+      </div>
+    </main>
+  );
 }
