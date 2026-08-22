@@ -37,6 +37,9 @@ export function buildAuthSecurityOptions(isProduction: boolean) {
       },
     },
     advanced: {
+      database: {
+        generateId: "uuid" as const,
+      },
       useSecureCookies: isProduction,
       cookiePrefix: "aklar",
       defaultCookieAttributes: {
@@ -48,3 +51,4 @@ export function buildAuthSecurityOptions(isProduction: boolean) {
     },
   };
 }
+
