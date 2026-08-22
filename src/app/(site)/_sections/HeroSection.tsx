@@ -55,7 +55,7 @@ export function HeroSection({ data }: HeroSectionProps) {
   )
 
   const [selectedIndex, setSelectedIndex] = useState(0)
-  const [scrollSnaps, setScrollSnaps] = useState<number[]>([])
+  const scrollSnaps = slider_images.map((slide) => slide.id)
 
   const scrollPrev = useCallback(() => emblaApi?.scrollPrev(), [emblaApi])
   const scrollNext = useCallback(() => emblaApi?.scrollNext(), [emblaApi])
@@ -68,7 +68,6 @@ export function HeroSection({ data }: HeroSectionProps) {
 
   useEffect(() => {
     if (!emblaApi) return
-    setScrollSnaps(emblaApi.scrollSnapList())
     emblaApi.on('select', onSelect)
     return () => {
       emblaApi.off('select', onSelect)

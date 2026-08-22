@@ -1,0 +1,41 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1787352532328,
+      "tag": "0000_initial_platform",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1787352640536,
+      "tag": "0001_auth_rate_limit",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1787352818509,
+      "tag": "0002_single_owner_constraint",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1787355827252,
+      "tag": "0003_seed_legal_drafts",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1787356490747,
+      "tag": "0004_unique_storage_deletion_job",
+      "breakpoints": true
+    }
+  ]
+}

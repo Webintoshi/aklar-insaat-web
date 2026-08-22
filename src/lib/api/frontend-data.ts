@@ -1,6 +1,10 @@
 // AKLAR İNŞAAT - FRONTEND DATA API
 
-import { createClient } from '@/lib/supabase/server'
+import { and, asc, desc, eq, inArray } from 'drizzle-orm'
+
+import { db } from '@/db/client'
+import { mediaAssets, projectMedia, projects, projectUnitTypes, siteSections } from '@/db/schema'
+import { resolveR2ContentUrls } from '@/lib/migration/supabase-transform'
 
 // ============================================================
 // TYPES
@@ -239,267 +243,116 @@ const defaultFooter: FooterSettings = {
   ],
 }
 
-const defaultProjects: Project[] = [
-  {
-    id: '1',
-    slug: 'modern-yasam',
-    title: 'Modern Yaşam',
-    description: 'Şehir merkezinde modern konut projesi',
-    status: 'completed',
-    location: 'İstanbul, Kadıköy',
-    completion_date: '2023-06-01',
-    featured_image: '/images/hero-banner.jpg',
-    features: [{ icon: 'Bed', label: 'Oda', value: '3+1' }, { icon: 'Maximize', label: 'Alan', value: '150 m²' }],
-  },
-  {
-    id: '2',
-    slug: 'lotus-yasam-evleri',
-    title: 'Lotus Yaşam Evleri',
-    description: 'Havuzlu site içi konut projesi',
-    status: 'ongoing',
-    location: 'İstanbul, Beylikdüzü',
-    completion_date: null,
-    featured_image: '/images/hero-banner-2.jpg',
-    features: [{ icon: 'Bed', label: 'Oda', value: '2+1' }, { icon: 'Maximize', label: 'Alan', value: '120 m²' }],
-  },
-  {
-    id: '3',
-    slug: 'aklar-residence',
-    title: 'Aklar Residence',
-    description: 'Lüks konut projesi',
-    status: 'completed',
-    location: 'İstanbul, Üsküdar',
-    completion_date: '2022-12-01',
-    featured_image: '/images/about-building.jpg',
-    features: [{ icon: 'Bed', label: 'Oda', value: '4+1' }, { icon: 'Maximize', label: 'Alan', value: '200 m²' }],
-  },
-]
-
 // ============================================================
 // API FUNCTIONS
 // ============================================================
 
-export async function getHeroSection(): Promise<HeroSection> {
-  const supabase = await createClient()
-  
-  // Önce hero_banners tablosundan aktif banner'ları çek
-  const { data: banners } = await supabase
-    .from('hero_banners')
-    .select('*')
-    .eq('is_active', true)
-    .order('order_index', { ascending: true })
-  
-  // Eğer banner varsa, slider formatına dönüştür
-  if (banners && banners.length > 0) {
-    const sliderImages = banners.map((banner) => ({
-      id: banner.id,
-      image: banner.desktop_image || '/images/hero-banner.jpg',
-      mobile_image: banner.mobile_image || undefined,
-      pre_title: '',
-      title: banner.title || '',
-      highlight_word: banner.subtitle || '',
-      badge_text: '',
-      badge_subtext: '',
-      cta_text: banner.button_text || 'İNCELE',
-      cta_link: banner.button_link || '/projeler',
-    }))
-    
-    return {
-      ...defaultHero,
-      background_type: 'slider',
-      slider_images: sliderImages,
-    }
-  }
-  
-  // Banner yoksa hero_sections tablosuna bak
-  const { data } = await supabase
-    .from('hero_sections')
-    .select('*')
-    .eq('is_active', true)
-    .order('order_index', { ascending: true })
+async function getPublishedSection<T>(sectionKey: string, fallback: T): Promise<T> {
+  const [section] = await db
+    .select({ content: siteSections.content })
+    .from(siteSections)
+    .where(
+      and(
+        eq(siteSections.sectionKey, sectionKey),
+        eq(siteSections.status, 'published'),
+      ),
+    )
     .limit(1)
-    .single()
-  
-  return data || defaultHero
+
+  if (!section) return fallback
+  const publicBase = process.env.NEXT_PUBLIC_R2_PUBLIC_URL || 'https://media.orduaklarinsaat.com'
+  return resolveR2ContentUrls({ ...fallback, ...section.content }, publicBase) as T
+}
+
+export async function getHeroSection(): Promise<HeroSection> {
+  return getPublishedSection<HeroSection>('hero', defaultHero)
 }
 
 export async function getAboutSection(): Promise<AboutSection> {
-  const supabase = await createClient()
-  const { data } = await supabase
-    .from('about_sections')
-    .select('*')
-    .eq('is_active', true)
-    .order('updated_at', { ascending: false })
-    .order('created_at', { ascending: false })
-    .limit(1)
-    .maybeSingle()
-
-  if (!data) return defaultAbout
-
-  const rawParagraphs = (data as { paragraphs?: unknown }).paragraphs
-  const parsedParagraphs = Array.isArray(rawParagraphs)
-    ? rawParagraphs
-        .filter((p): p is string => typeof p === 'string')
-        .map((p) => p.trim())
-        .filter(Boolean)
-    : []
-
-  const descriptionText = (data as { description?: string | null }).description?.trim()
-
-  return {
-    ...defaultAbout,
-    ...data,
-    image_url: (data as { image_url?: string | null }).image_url || defaultAbout.image_url,
-    subtitle: (data as { subtitle?: string | null; pre_title?: string | null }).subtitle
-      || (data as { pre_title?: string | null }).pre_title
-      || defaultAbout.subtitle,
-    paragraphs: parsedParagraphs.length > 0
-      ? parsedParagraphs
-      : descriptionText
-        ? [descriptionText]
-        : defaultAbout.paragraphs,
-    highlight_text: (data as { highlight_text?: string | null }).highlight_text
-      || (data as { highlight_word?: string | null }).highlight_word
-      || defaultAbout.highlight_text,
-    experience_badge: (data as { experience_badge?: { years?: number; text?: string } | null }).experience_badge?.years
-      ? {
-          years: (data as { experience_badge?: { years: number; text?: string } }).experience_badge!.years,
-          text: (data as { experience_badge?: { text?: string } }).experience_badge?.text || defaultAbout.experience_badge.text,
-        }
-      : defaultAbout.experience_badge,
-  }
+  return getPublishedSection<AboutSection>('about', defaultAbout)
 }
 
 export async function getProjects(options?: { status?: 'completed' | 'ongoing'; featured?: boolean; limit?: number }): Promise<Project[]> {
-  const supabase = await createClient()
+  const filters = [eq(projects.publicationStatus, 'published')]
+  if (options?.status) filters.push(eq(projects.constructionStage, options.status))
 
-  let query = supabase
-    .from('projects')
-    .select('*')
-    .or('is_published.eq.true,status.eq.published')
-    .order('sort_order', { ascending: true })
-    .order('created_at', { ascending: false })
+  const projectRows = await db
+    .select()
+    .from(projects)
+    .where(and(...filters))
+    .orderBy(desc(projects.publishedAt), desc(projects.createdAt))
+    .limit(options?.limit ?? 100)
 
-  if (options?.status) query = query.eq('project_status', options.status)
-  if (options?.featured) query = query.eq('is_featured', true)
-  if (options?.limit) query = query.limit(options.limit)
+  if (projectRows.length === 0) return []
+  const ids = projectRows.map((project) => project.id)
+  const [covers, units] = await Promise.all([
+    db
+      .select({
+        projectId: projectMedia.projectId,
+        objectKey: mediaAssets.objectKey,
+      })
+      .from(projectMedia)
+      .innerJoin(mediaAssets, eq(projectMedia.mediaAssetId, mediaAssets.id))
+      .where(
+        and(
+          inArray(projectMedia.projectId, ids),
+          eq(projectMedia.category, 'cover'),
+          eq(mediaAssets.status, 'active'),
+        ),
+      ),
+    db
+      .select()
+      .from(projectUnitTypes)
+      .where(inArray(projectUnitTypes.projectId, ids))
+      .orderBy(asc(projectUnitTypes.position)),
+  ])
 
-  const { data: projectRows, error: projectsError } = await query
-  if (projectsError || !projectRows || projectRows.length === 0) return []
-
-  const projectIds = projectRows.map((p) => p.id).filter(Boolean)
-
-  const { data: mediaRows } = projectIds.length
-    ? await supabase
-        .from('project_media')
-        .select('project_id, category, url, sort_order, created_at')
-        .in('project_id', projectIds)
-        .order('created_at', { ascending: true })
-        .order('sort_order', { ascending: true })
-    : { data: [] as Array<{ project_id: string; category: string | null; url: string | null; sort_order?: number | null; created_at?: string | null }> }
-
-  const { data: imageRows } = projectIds.length
-    ? await supabase
-        .from('project_images')
-        .select('project_id, image_type, image_url, order_index, created_at')
-        .in('project_id', projectIds)
-        .order('created_at', { ascending: true })
-        .order('order_index', { ascending: true })
-    : { data: [] as Array<{ project_id: string; image_type: string | null; image_url: string | null; order_index?: number | null; created_at?: string | null }> }
-
-  return projectRows.map((p) => {
-    const media = (mediaRows || []).filter((m) => m.project_id === p.id)
-    const images = (imageRows || []).filter((img) => img.project_id === p.id)
-
-    const firstMediaImage =
-      media.find((m) => typeof m.url === 'string' && m.url.trim().length > 0)?.url || null
-
-    const firstLegacyImage =
-      images.find((img) => typeof img.image_url === 'string' && img.image_url.trim().length > 0)?.image_url || null
-
-    const featuredImage =
-      firstMediaImage ||
-      firstLegacyImage ||
-      (p as { featured_image?: string | null; about_image_url?: string | null }).featured_image ||
-      (p as { about_image_url?: string | null }).about_image_url ||
-      null
-
-    return {
-      ...p,
-      title: p.title || p.name || 'Proje',
-      name: p.name || p.title || 'Proje',
-      status: (p.project_status || (p.status === 'completed' || p.status === 'ongoing' ? p.status : 'ongoing')) as 'completed' | 'ongoing',
-      project_status: (p.project_status || null) as 'completed' | 'ongoing' | null,
-      featured_image: featuredImage || null,
-      features: p.features || [],
-    }
-  })
+  const mediaBase = (process.env.NEXT_PUBLIC_R2_PUBLIC_URL || 'https://media.orduaklarinsaat.com').replace(/\/+$/, '')
+  const coversByProject = new Map(covers.map((cover) => [cover.projectId, cover.objectKey]))
+  const unitsByProject = new Map<string, typeof units>()
+  for (const unit of units) {
+    const projectUnits = unitsByProject.get(unit.projectId) || []
+    projectUnits.push(unit)
+    unitsByProject.set(unit.projectId, projectUnits)
+  }
+  return projectRows.map((project) => ({
+    id: project.id,
+    slug: project.slug,
+    title: project.name,
+    name: project.name,
+    description: project.shortDescription,
+    status: project.constructionStage || 'ongoing',
+    project_status: project.constructionStage,
+    location: [project.neighborhood, project.district, project.city].filter(Boolean).join(', ') || null,
+    completion_date: project.completionDate,
+    featured_image: coversByProject.has(project.id)
+      ? mediaBase + '/' + coversByProject.get(project.id)
+      : null,
+    features: (unitsByProject.get(project.id) || [])
+      .map((unit) => ({
+        icon: 'Maximize',
+        label: unit.label,
+        value: unit.areaMin === unit.areaMax
+          ? String(unit.areaMin) + ' m²'
+          : String(unit.areaMin) + '-' + String(unit.areaMax) + ' m²',
+      })),
+  }))
 }
 
 export async function getProjectBySlug(slug: string): Promise<Project | null> {
-  const supabase = await createClient()
-  const { data } = await supabase
-    .from('projects')
-    .select(`*, images:project_images(*)`)
-    .eq('slug', slug)
-    .eq('is_published', true)
-    .single()
-  
-  if (!data) return null
-  
-  return {
-    ...data,
-    features: data.features || [],
-  }
+  return (await getProjects()).find((project) => project.slug === slug) ?? null
 }
 
 export async function getVideoSection(): Promise<VideoSection> {
-  const supabase = await createClient()
-  const { data } = await supabase
-    .from('video_sections')
-    .select('*')
-    .eq('is_active', true)
-    .order('order_index', { ascending: true })
-    .limit(1)
-    .single()
-  
-  return data || defaultVideo
+  return getPublishedSection<VideoSection>('video', defaultVideo)
 }
 
 export async function getInfoCardsSection(): Promise<InfoCardsSection> {
-  const supabase = await createClient()
-  
-  const { data: section } = await supabase
-    .from('info_cards_sections')
-    .select('*')
-    .eq('is_active', true)
-    .limit(1)
-    .single()
-  
-  if (!section) return defaultInfoCards
-  
-  const { data: cards } = await supabase
-    .from('info_cards')
-    .select('*')
-    .eq('section_id', section.id)
-    .order('order_index', { ascending: true })
-  
-  return {
-    ...section,
-    cards: cards?.length ? cards : defaultInfoCards.cards,
-  }
+  return getPublishedSection<InfoCardsSection>('info_cards', defaultInfoCards)
 }
 
 export async function getFooterSettings(): Promise<FooterSettings> {
-  const supabase = await createClient()
-  const { data } = await supabase
-    .from('footer_settings')
-    .select('*')
-    .eq('is_active', true)
-    .limit(1)
-    .single()
-
-  const footer = (data || defaultFooter) as FooterSettings
+  const footer = await getPublishedSection<FooterSettings>('footer', defaultFooter)
   const rawPhone = footer.contact_info?.phone?.trim() || defaultFooter.contact_info.phone
   const rawWorkingHours = footer.contact_info?.working_hours?.trim() || defaultFooter.contact_info.working_hours
 

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import Link from 'next/link'
 import { motion } from 'framer-motion'
 import { 
   PencilRuler, 
@@ -153,7 +154,7 @@ export default function TaahhutPage() {
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 xl:px-12 relative z-10">
           <div className="max-w-3xl">
             <nav className="flex items-center gap-2 text-sm text-white/60 mb-6">
-              <a href="/" className="hover:text-white transition-colors">Anasayfa</a>
+              <Link href="/" className="hover:text-white transition-colors">Anasayfa</Link>
               <span>/</span>
               <span className="text-white">Taahhüt</span>
             </nav>
@@ -161,7 +162,7 @@ export default function TaahhutPage() {
               Taahhüt
             </h1>
             <p className="text-xl text-white/80 leading-relaxed">
-              Uzman ekibimizle A'dan Z'ye tüm inşaat ve taahhüt işlerinizi profesyonelce yürütüyoruz.
+              Uzman ekibimizle A’dan Z’ye tüm inşaat ve taahhüt işlerinizi profesyonelce yürütüyoruz.
               Kalite standartlarından ödün vermeden projelerinizi hayata geçiriyoruz.
             </p>
           </div>

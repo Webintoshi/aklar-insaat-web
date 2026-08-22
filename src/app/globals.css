@@ -83,6 +83,16 @@ body {
   font-family: var(--font-body);
 }
 
+@layer components {
+  .admin-input {
+    @apply h-11 w-full rounded-md border border-[#cfd3d9] bg-white px-3.5 text-sm text-[#252830] outline-none transition;
+  }
+
+  .admin-input:focus {
+    @apply border-[#d40000] ring-2 ring-red-100;
+  }
+}
+
 /* Custom Scrollbar */
 ::-webkit-scrollbar {
   width: 8px;

@@ -7,9 +7,10 @@ import { InfoCardsSection } from './(site)/_sections/InfoCardsSection'
 import { ProjectsSection } from './(site)/_sections/ProjectsSection'
 import { VideoSection } from './(site)/_sections/VideoSection'
 
+export const dynamic = 'force-dynamic'
+
 export default async function HomePage() {
-  const data = await getHomePageData()
-  const footerData = await getFooterSettings()
+  const [data, footerData] = await Promise.all([getHomePageData(), getFooterSettings()])
 
   return (
     <>

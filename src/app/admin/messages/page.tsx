@@ -1,86 +1,82 @@
-import { createClient } from '@/lib/supabase/server'
-import { Check, Trash2, Mail, Phone, MapPin } from 'lucide-react'
-import { MarkAsReadButton } from './_components/mark-as-read-button'
-import { DeleteMessageButton } from './_components/delete-message-button'
+import { desc } from "drizzle-orm";
+import { Mail } from "lucide-react";
 
-async function getMessages() {
-  const supabase = await createClient()
-  const { data } = await supabase
-    .from('contact_messages')
-    .select('*')
-    .order('created_at', { ascending: false })
-  
-  return data || []
+import { db } from "@/db/client";
+import { contactMessages } from "@/db/schema";
+
+import { MessageActions } from "./_components/message-actions-v2";
+
+export const dynamic = "force-dynamic";
+
+function formatDate(date: Date) {
+  return new Intl.DateTimeFormat("tr-TR", {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(date);
 }
 
+const statusLabel = {
+  unread: "Okunmadı",
+  read: "Okundu",
+  archived: "Arşiv",
+} as const;
+
 export default async function MessagesPage() {
-  const messages = await getMessages()
+  const messages = await db
+    .select()
+    .from(contactMessages)
+    .orderBy(desc(contactMessages.createdAt))
+    .limit(100);
 
   return (
-    <div>
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-gray-800">İletişim Mesajları</h1>
+    <div className="mx-auto max-w-[1180px]">
+      <div className="mb-7">
+        <h1 className="text-[28px] font-semibold tracking-[-0.025em]">Mesajlar</h1>
+        <p className="mt-1 text-sm text-[#707581]">
+          İletişim formundan gelen talepleri okuyun ve arşivleyin.
+        </p>
       </div>
 
-      {messages.length === 0 ? (
-        <div className="bg-white rounded-xl shadow-sm p-12 text-center">
-          <Mail className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-          <p className="text-gray-500">Henüz mesaj bulunmuyor.</p>
-        </div>
-      ) : (
-        <div className="space-y-4">
-          {messages.map((message) => (
-            <div 
-              key={message.id} 
-              className={`bg-white rounded-xl shadow-sm p-6 ${
-                !message.is_read ? 'border-l-4 border-blue-600' : ''
-              }`}
-            >
-              <div className="flex items-start justify-between mb-4">
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-800">
-                    {message.name}
-                  </h3>
-                  <div className="flex items-center space-x-4 mt-1">
-                    {message.email && (
-                      <span className="flex items-center text-sm text-gray-500">
-                        <Mail className="w-4 h-4 mr-1" />
-                        {message.email}
-                      </span>
-                    )}
-                    {message.phone && (
-                      <span className="flex items-center text-sm text-gray-500">
-                        <Phone className="w-4 h-4 mr-1" />
-                        {message.phone}
-                      </span>
-                    )}
-                  </div>
-                </div>
-                <div className="flex items-center space-x-2">
-                  {!message.is_read && (
-                    <MarkAsReadButton messageId={message.id} />
-                  )}
-                  <DeleteMessageButton messageId={message.id} />
-                </div>
+      <section className="overflow-hidden rounded-md border border-[#dde0e5] bg-white">
+        {messages.map((message) => (
+          <article
+            key={message.id}
+            className="grid gap-4 border-b border-[#e7e9ec] px-5 py-5 last:border-b-0 md:grid-cols-[42px_1fr_auto]"
+          >
+            <span className="relative flex h-10 w-10 items-center justify-center rounded-full bg-[#f1f2f4] text-[#646a75]">
+              <Mail className="h-5 w-5" aria-hidden="true" />
+              {message.status === "unread" && (
+                <span className="absolute right-0 top-0 h-2.5 w-2.5 rounded-full border-2 border-white bg-[#d40000]" />
+              )}
+            </span>
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                <h2 className="font-semibold text-[#20232a]">{message.name}</h2>
+                <span className="rounded bg-[#f2f3f5] px-2 py-1 text-[10px] text-[#686e79]">
+                  {statusLabel[message.status]}
+                </span>
+                <time className="text-xs text-[#888d97]">{formatDate(message.createdAt)}</time>
               </div>
-              
-              <div className="bg-gray-50 rounded-lg p-4">
-                <p className="text-gray-700 whitespace-pre-wrap">{message.message}</p>
-              </div>
-              
-              <p className="text-xs text-gray-400 mt-4">
-                {new Date(message.created_at).toLocaleDateString('tr-TR', {
-                  day: 'numeric',
-                  month: 'long',
-                  year: 'numeric',
-                  hour: '2-digit',
-                  minute: '2-digit',
-                })}
+              <p className="mt-1 text-xs text-[#777c87]">
+                {message.email}
+                {message.phone ? " · " + message.phone : ""}
+              </p>
+              {message.subject && (
+                <p className="mt-3 text-sm font-medium text-[#343840]">{message.subject}</p>
+              )}
+              <p className="mt-1 whitespace-pre-wrap text-sm leading-6 text-[#5d636e]">
+                {message.message}
               </p>
             </div>
-          ))}
-        </div>
-      )}
+            <MessageActions id={message.id} status={message.status} />
+          </article>
+        ))}
+        {messages.length === 0 && (
+          <div className="px-5 py-20 text-center text-sm text-[#777c87]">
+            Henüz iletişim mesajı yok.
+          </div>
+        )}
+      </section>
     </div>
-  )
+  );
 }
