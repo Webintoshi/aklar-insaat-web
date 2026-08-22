@@ -85,6 +85,15 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
           build-args: |
-            NEXT_PUBLIC_SITE_URL=${{ vars.NEXT_PUBLIC_SITE_URL }}
-            NEXT_PUBLIC_R2_PUBLIC_URL=${{ vars.NEXT_PUBLIC_R2_PUBLIC_URL }}
+            NEXT_PUBLIC_SITE_URL=https://orduaklarinsaat.com
+            NEXT_PUBLIC_R2_PUBLIC_URL=https://media.orduaklarinsaat.com
+            DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:5432/aklar_build
+            BETTER_AUTH_SECRET=build-only-secret-that-is-at-least-32-characters-long
+            BETTER_AUTH_URL=https://orduaklarinsaat.com
+            R2_ACCOUNT_ID=build-account
+            R2_ACCESS_KEY_ID=build-access-key
+            R2_SECRET_ACCESS_KEY=build-secret-key
+            R2_BUCKET_NAME=aklar-insaat-web
+            IP_HASH_SECRET=build-only-ip-hash-secret-at-least-32-characters
+            INTERNAL_CRON_SECRET=build-only-cron-secret-at-least-32-characters
 
